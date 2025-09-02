@@ -1,0 +1,202 @@
+// providers/auth_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/api_service.dart';
+
+final userIdProvider = StateProvider<int?>((ref) => null);
+const _storage = FlutterSecureStorage();
+
+class AuthState {
+  final bool isLoading;
+  bool isVerified = true;
+  final bool isSignedUp;
+  final bool isLoggedIn;
+  final String errorMessage;
+  final String? token;
+  final String? refreshToken;
+  final int? userId;
+
+  AuthState({
+    required this.isLoading,
+    required this.isSignedUp,
+    required this.isLoggedIn,
+    required this.errorMessage,
+    required this.isVerified,
+    this.token,
+    this.refreshToken,
+    this.userId,
+  });
+
+  factory AuthState.initial() {
+    return AuthState(
+      isLoading: false,
+      isVerified: true,
+      isSignedUp: false,
+      isLoggedIn: false,
+      errorMessage: '',
+      token: null,
+      refreshToken: null,
+      userId: null,
+    );
+  }
+
+  AuthState copyWith({
+    bool? isLoading,
+    bool? isSignedUp,
+    bool? isLoggedIn,
+    String? errorMessage,
+    String? token,
+    String? refreshToken,
+    int? userId,
+    bool? isVerified = true,
+  }) {
+    return AuthState(
+      isLoading: isLoading ?? this.isLoading,
+      isSignedUp: isSignedUp ?? this.isSignedUp,
+      isLoggedIn: isLoggedIn ?? this.isLoggedIn,
+      errorMessage: errorMessage ?? this.errorMessage,
+      token: token ?? this.token,
+      refreshToken: refreshToken ?? this.refreshToken,
+      userId: userId ?? this.userId,
+      isVerified: isVerified ?? this.isVerified,
+    );
+  }
+}
+
+class AuthNotifier extends StateNotifier<AuthState> {
+  final ApiService _apiService;
+  final Ref _ref;
+
+  AuthNotifier(this._ref, this._apiService) : super(AuthState.initial());
+
+  void _setUserId(int? userId) {
+    _ref.read(userIdProvider.notifier).state = userId;
+  }
+
+  Future<void> login({
+    required String username,
+    required String password,
+    required WidgetRef ref,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: '', isSignedUp: false);
+    print("_apiService.login ");
+
+    final result = await _apiService.login(
+      username: username,
+      password: password,
+    );
+    print("result = $result");
+
+    if (result != null) {
+      // Check if the response contains an error message
+      if (result['error'] != null) {
+        String errorMessage = result['error'];
+
+        // Check if the error message contains 'not verified'
+        if (errorMessage.contains('not verified')) {
+          final userId = result['user_id'];
+          _setUserId(userId);
+
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: true,
+            isSignedUp: false,
+            isVerified: false,
+            errorMessage: errorMessage, // Set the exact error message here
+          );
+          // Note: Remove provider invalidation for now as they're not available yet
+          // ref.invalidate(userNameProvider);
+        } else {
+          // For other errors, simply show the error message
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: errorMessage,
+          );
+        }
+      }
+      // Check for a successful login
+      else if (result['token'] != null &&
+          result['refresh_token'] != null &&
+          result['user_id'] != null) {
+        final token = result['token'];
+        final refreshToken = result['refresh_token'];
+        final userId = result['user_id'];
+
+        _setUserId(userId);
+        // Note: Remove provider invalidation for now as they're not available yet
+        // ref.invalidate(userNameProvider);
+        // ref.invalidate(contractsProvider);
+
+        // Optionally store token and refreshToken in secure storage
+        // await _secureStorage.write(key: 'token', value: token);
+        // await _secureStorage.write(key: 'refresh_token', value: refreshToken);
+
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: true,
+          isSignedUp: false,
+          token: token,
+          refreshToken: refreshToken,
+          userId: userId,
+          isVerified: true, // User is verified after login success
+        );
+      }
+      // If the response is unexpected (i.e., no token or refresh_token)
+      else {
+        print("response is unexpected");
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Login failed. Please check your credentials.',
+        );
+      }
+    } else {
+      print("Login Failed!!");
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Login failed. Please try again.',
+      );
+    }
+  }
+
+  void logout(WidgetRef ref) {
+    _storage.deleteAll();
+    _setUserId(null);
+    state = AuthState.initial();
+  }
+
+  clearStateError() {
+    state = state.copyWith(errorMessage: '');
+  }
+
+  // Initialize auth state from stored tokens
+  Future<void> initializeAuth() async {
+    try {
+      final token = await _storage.read(key: 'token');
+      final refreshToken = await _storage.read(key: 'refresh_token');
+      final userIdStr = await _storage.read(key: 'user_id');
+
+      if (token != null && refreshToken != null && userIdStr != null) {
+        final userId = int.tryParse(userIdStr);
+        if (userId != null) {
+          _setUserId(userId);
+          state = state.copyWith(
+            isLoggedIn: true,
+            isVerified: true,
+            token: token,
+            refreshToken: refreshToken,
+            userId: userId,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error initializing auth: $e');
+      // Clear corrupted data
+      await _storage.deleteAll();
+    }
+  }
+}
+
+// Create a provider for AuthNotifier
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier(ref, ApiService());
+});
