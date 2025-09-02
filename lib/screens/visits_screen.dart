@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'visit_details.dart';
 
 class DriverVisitsScreen extends StatefulWidget {
   const DriverVisitsScreen({Key? key}) : super(key: key);
@@ -45,58 +46,67 @@ final List<String> _visitStatuses = [
 
   // Hardcoded data based on the image
   final List<Map<String, dynamic>> _hardcodedVisits = [
-    {
-      'id': '1',
-      'workerName': 'Narmin zain - Addamam',
-      'timeSlot': 'From 08:00AM To 12:00PM',
-      'totalVisits': 6,
-      'nationalities': {'East Asia': 6},
-      'workers': [
-        {
-          'name': 'Jovelyn Nativadid Capirial (East Asia)',
-          'price': '90.0 SAR',
-          'duration': 'Fawran 4 Hours',
-          'contractId': 'HS738759',
-          'status': 'Paid',
-          'bookingStatus': 'New'
-        }
-      ]
-    },
-    {
-      'id': '2',
-      'workerName': 'Narmin zain - Addamam',
-      'timeSlot': 'From 08:00AM To 12:00PM',
-      'totalVisits': 6,
-      'nationalities': {'East Asia': 6},
-      'workers': [
-        {
-          'name': 'Jovelyn Nativadid Capirial (East Asia)',
-          'price': '90.0 SAR',
-          'duration': 'Fawran 4 Hours',
-          'contractId': 'HS738759',
-          'status': 'Paid',
-          'bookingStatus': 'New'
-        }
-      ]
-    },
-    {
-      'id': '3',
-      'workerName': 'Narmin zain - Addamam',
-      'timeSlot': 'From 08:00AM To 12:00PM',
-      'totalVisits': 6,
-      'nationalities': {'East Asia': 6},
-      'workers': [
-        {
-          'name': 'Jovelyn Nativadid Capirial (East Asia)',
-          'price': '90.0 SAR',
-          'duration': 'Fawran 4 Hours',
-          'contractId': 'HS738759',
-          'status': 'Paid',
-          'bookingStatus': 'New'
-        }
-      ]
-    }
-  ];
+  {
+    'id': '1',
+    'workerName': 'Narmin zain - Addamam',
+    'timeSlot': 'From 08:00AM To 12:00PM',
+    'totalVisits': 6,
+    'address': 'Al Malaz, Riyadh 12635, Saudi Arabia',
+    'latitude': 24.7136,
+    'longitude': 46.6753,
+    'nationalities': {'East Asia': 6},
+    'workers': [
+      {
+        'name': 'Jovelyn Nativadid Capirial (East Asia)',
+        'price': '90.0 SAR',
+        'duration': 'Fawran 4 Hours',
+        'contractId': 'HS738759',
+        'status': 'Paid',
+        'bookingStatus': 'New'
+      }
+    ]
+  },
+  {
+    'id': '2',
+    'workerName': 'Narmin zain - Addamam',
+    'timeSlot': 'From 08:00AM To 12:00PM',
+    'totalVisits': 6,
+    'address': 'King Fahd District, Riyadh 12271, Saudi Arabia',
+    'latitude': 24.6877,
+    'longitude': 46.7219,
+    'nationalities': {'East Asia': 6},
+    'workers': [
+      {
+        'name': 'Jovelyn Nativadid Capirial (East Asia)',
+        'price': '90.0 SAR',
+        'duration': 'Fawran 4 Hours',
+        'contractId': 'HS738759',
+        'status': 'Paid',
+        'bookingStatus': 'New'
+      }
+    ]
+  },
+  {
+    'id': '3',
+    'workerName': 'Narmin zain - Addamam',
+    'timeSlot': 'From 08:00AM To 12:00PM',
+    'totalVisits': 6,
+    'address': 'Al Olaya, Riyadh 12213, Saudi Arabia',
+    'latitude': 24.6951,
+    'longitude': 46.6851,
+    'nationalities': {'East Asia': 6},
+    'workers': [
+      {
+        'name': 'Jovelyn Nativadid Capirial (East Asia)',
+        'price': '90.0 SAR',
+        'duration': 'Fawran 4 Hours',
+        'contractId': 'HS738759',
+        'status': 'Paid',
+        'bookingStatus': 'New'
+      }
+    ]
+  }
+];
 
 Future<void> _makePhoneCall(String phoneNumber) async {
   final Uri launchUri = Uri(
@@ -343,6 +353,37 @@ void _showVisitStatusDialog(BuildContext context) {
   );
 }
 
+Future<void> _openDefaultMaps(double latitude, double longitude, String address) async {
+  // Try to open native map apps first
+  final Uri geoUri = Uri.parse('geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encodeComponent(address)})');
+  
+  if (await canLaunchUrl(geoUri)) {
+    await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+  } else {
+    // Fallback to Google Maps web
+    final Uri googleMapsUri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&travelmode=driving'
+    );
+    
+    if (await canLaunchUrl(googleMapsUri)) {
+      await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
+    } else {
+      _showErrorSnackBar('Could not open maps');
+    }
+  }
+}
+
+void _showErrorSnackBar(String message) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
 Widget _buildDialogOption(String text, String? selectedValue, Function(String) onTap, {bool isSelected = false, bool isAllOption = false}) {
   final bool selected = isSelected || selectedValue == text;
   
@@ -401,15 +442,25 @@ Container(
   );
 }
   Widget _buildVisitCard(Map<String, dynamic> visit) {
-    final visitId = visit['id'].toString();
-    final isExpanded = expandedVisits.contains(visitId);
+  final visitId = visit['id'].toString();
+  final isExpanded = expandedVisits.contains(visitId);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        children: [
-          // Main card content
-          Container(
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: Column(
+      children: [
+        // Main card content - wrapped in GestureDetector for navigation
+        GestureDetector(
+          onTap: () {
+            // Navigate to visit details screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VisitDetailsScreen(),
+              ),
+            );
+          },
+          child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -427,123 +478,123 @@ Container(
               children: [
                 // Header section
                 Container(
-  child: IntrinsicHeight(
-    child: Row(
-      children: [
-        // Blue background section for expand/collapse button - extends to full height
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              if (expandedVisits.contains(visitId)) {
-                expandedVisits.remove(visitId);
-              } else {
-                expandedVisits.add(visitId);
-              }
-            });
-          },
-          child: Container(
-            width: 60,
-            decoration: BoxDecoration(
-              color: Color(0xFF05ABD7),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(11),
-                topRight: Radius.zero,
-                bottomLeft: isExpanded ? Radius.zero : Radius.circular(11),
-                bottomRight: Radius.zero,
-              ),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: AnimatedRotation(
-                turns: isExpanded ? 0.25 : 0,
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-        ),
-        
-        // White background section for visit info
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.zero,
-                topRight: Radius.circular(11),
-                bottomLeft: Radius.zero,
-                bottomRight: isExpanded ? Radius.zero : Radius.circular(11),
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    SvgPicture.asset(
-                      'assets/icons/person_visit.svg',
-                      width: 16,
-                      height: 16,
-                      colorFilter: ColorFilter.mode(Color(0xFF05ABD7), BlendMode.srcIn),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        // Blue background section for expand/collapse button - extends to full height
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (expandedVisits.contains(visitId)) {
+                                expandedVisits.remove(visitId);
+                              } else {
+                                expandedVisits.add(visitId);
+                              }
+                            });
+                          },
+                          child: Container(
+                            width: 60,
+                            decoration: BoxDecoration(
+                              color: Color(0xFF05ABD7),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(11),
+                                topRight: Radius.zero,
+                                bottomLeft: isExpanded ? Radius.zero : Radius.circular(11),
+                                bottomRight: Radius.zero,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            child: Center(
+                              child: AnimatedRotation(
+                                turns: isExpanded ? 0.25 : 0,
+                                duration: const Duration(milliseconds: 300),
+                                child: const Icon(
+                                  Icons.arrow_forward_ios,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // White background section for visit info
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.zero,
+                                topRight: Radius.circular(11),
+                                bottomLeft: Radius.zero,
+                                bottomRight: isExpanded ? Radius.zero : Radius.circular(11),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    SvgPicture.asset(
+                                      'assets/icons/person_visit.svg',
+                                      width: 16,
+                                      height: 16,
+                                      colorFilter: ColorFilter.mode(Color(0xFF05ABD7), BlendMode.srcIn),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        visit['workerName'],
+                                        style: const TextStyle(
+                                          color: Color(0xFF05ABD7),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.access_time,
+                                      size: 14,
+                                      color: Color(0xFF05ABD7),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      visit['timeSlot'],
+                                      style: const TextStyle(
+                                        color: Color(0xFF05ABD7),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        visit['workerName'],
-                        style: const TextStyle(
-                          color: Color(0xFF05ABD7),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (isExpanded)
+                  Container(
+                    width: double.infinity,
+                    height: 0.5, // 0.5px thick
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Color(0xFFBCBEBF),
+                          width: 0.5,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 14,
-                      color: Color(0xFF05ABD7),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      visit['timeSlot'],
-                      style: const TextStyle(
-                        color: Color(0xFF05ABD7),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-  if (isExpanded)
-    Container(
-    width: double.infinity,
-    height: 0.5, // 0.5px thick
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(
-          color: Color(0xFFBCBEBF),
-          width: 0.5,
-        ),
-      ),
-    ),
-  ),
+                  ),
 
                 // Expandable content
                 AnimatedContainer(
@@ -639,52 +690,84 @@ Container(
               ],
             ),
           ),
+        ),
 
-          // Action buttons - Attached to bottom of card
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Address action
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFFFC107),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(11),
-                        topLeft: Radius.circular(0),
-                      ),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Address',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+        // Action buttons - Attached to bottom of card
+        Row(
+          children: [
+            Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                // Open maps directly instead of navigating to another screen
+                _openDefaultMaps(
+                  visit['latitude'] ?? 24.7136,
+                  visit['longitude'] ?? 46.6753,
+                  visit['address'] ?? 'Address not available',
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFFFC107),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(11),
+                    topLeft: Radius.circular(0),
                   ),
                 ),
+                elevation: 0,
               ),
-              Expanded(
+              child: const Text(
+                'Address',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+            Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                _showPhoneDialog(context, '0587583901');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFA200),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Call',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+            Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  _showPhoneDialog(context, '0587583901');
+                  // Arrive action
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFA200),
+                  backgroundColor: Color(0xFF21C15A),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
+                    borderRadius: BorderRadius.only(
+                      bottomRight: Radius.circular(11),
+                      topRight: Radius.circular(0),
+                    ),
                   ),
                   elevation: 0,
                 ),
                 child: const Text(
-                  'Call',
+                  'Arrive',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -692,38 +775,12 @@ Container(
                 ),
               ),
             ),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Arrive action
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF21C15A),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        bottomRight: Radius.circular(11),
-                        topRight: Radius.circular(0),
-                      ),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Arrive',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   void _showPhoneDialog(BuildContext context, String phoneNumber) {
   showDialog(
