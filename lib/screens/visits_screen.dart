@@ -447,33 +447,33 @@ Container(
 
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Column(
-      children: [
-        // Main card content - wrapped in GestureDetector for navigation
-        GestureDetector(
-          onTap: () {
-            // Navigate to visit details screen
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const VisitDetailsScreen(),
-              ),
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF00BCD4), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  spreadRadius: 0,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF00BCD4), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            spreadRadius: 0,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Main card content - wrapped in GestureDetector for navigation
+          GestureDetector(
+            onTap: () {
+              // Navigate to visit details screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const VisitDetailsScreen(),
                 ),
-              ],
-            ),
+              );
+            },
             child: Column(
               children: [
                 // Header section
@@ -499,7 +499,7 @@ Container(
                               borderRadius: BorderRadius.only(
                                 topLeft: Radius.circular(11),
                                 topRight: Radius.zero,
-                                bottomLeft: isExpanded ? Radius.zero : Radius.circular(11),
+                                bottomLeft: isExpanded ? Radius.zero : Radius.zero,
                                 bottomRight: Radius.zero,
                               ),
                             ),
@@ -527,7 +527,7 @@ Container(
                                 topLeft: Radius.zero,
                                 topRight: Radius.circular(11),
                                 bottomLeft: Radius.zero,
-                                bottomRight: isExpanded ? Radius.zero : Radius.circular(11),
+                                bottomRight: Radius.zero,
                               ),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
@@ -690,94 +690,94 @@ Container(
               ],
             ),
           ),
-        ),
-
-        // Action buttons - Attached to bottom of card
-        Row(
-          children: [
-            Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                // Open maps directly instead of navigating to another screen
-                _openDefaultMaps(
-                  visit['latitude'] ?? 24.7136,
-                  visit['longitude'] ?? 46.6753,
-                  visit['address'] ?? 'Address not available',
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFFFC107),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(11),
-                    topLeft: Radius.circular(0),
-                  ),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                'Address',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-            Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                _showPhoneDialog(context, '0587583901');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA200),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                'Call',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  // Arrive action
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF21C15A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      bottomRight: Radius.circular(11),
-                      topRight: Radius.circular(0),
+          
+          // Action buttons - Now integrated into the card
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    // Open maps directly instead of navigating to another screen
+                    _openDefaultMaps(
+                      visit['latitude'] ?? 24.7136,
+                      visit['longitude'] ?? 46.6753,
+                      visit['address'] ?? 'Address not available',
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFC107),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(11),
+                      ),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Address',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
-                  elevation: 0,
                 ),
-                child: const Text(
-                  'Arrive',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    _showPhoneDialog(context, '0587583901');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFA200),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Call',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    // Arrive action
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF21C15A),
+                      borderRadius: BorderRadius.only(
+                        bottomRight: Radius.circular(11),
+                      ),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Arrive',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ),
   );
 }
