@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_svg/flutter_svg.dart';
+import '../models/visit_model.dart';
+import '../services/api_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class VisitDetailsScreen extends StatefulWidget {
-  const VisitDetailsScreen({Key? key}) : super(key: key);
+  final Visit visit;
+
+  const VisitDetailsScreen({Key? key, required this.visit}) : super(key: key);
 
   @override
   State<VisitDetailsScreen> createState() => _VisitDetailsScreenState();
@@ -11,42 +16,110 @@ class VisitDetailsScreen extends StatefulWidget {
 
 class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   
-  // Sample data for the visit details
-  final Map<String, dynamic> _visitData = {
-    'timeFrom': '08:00 AM',
-    'timeTo': '12:00 PM',
-    'contractNumber': 'H536846',
-    'customerName': 'علي ابراهيم قريخ',
-    'residencyNumber': '77692046',
-    'statusType': 'New',
-    'laborName': 'Name Name',
-    'serviceName': 'Fawran 4 hours',
-    'nationality': 'East Asia',
-    'houseType': 'Building',
-    'houseNumber': '1',
-    'stageNumber': '3',
-    'apartmentNumber': '6',
-    'notes': 'Note it\'s says',
-  };
+  late Map<String, dynamic> _visitData;
 
   // Controllers for the new fields
-  final TextEditingController _numberController = TextEditingController(text: '6489864902');
+  late final TextEditingController _numberController;
   final TextEditingController _notesController = TextEditingController();
+
+  Map<String, dynamic>? _addressDetails;
+bool _isLoadingAddress = false;
+List<Map<String, dynamic>> _visitStatuses = [];
+bool _isLoadingStatuses = false;
+bool _isUpdating = false;
 
   // State for visit status dropdown
   String? _selectedVisitStatus;
-  final List<String> _visitStatuses = [
-    'All',
-    'New',
-    'Arrived',
-    'Arrived to deliver',
-    'Start',
-    'Finished - Done',
-    'Finished - Notfound',
-    'Free visit cancelled',
-    'Not finished - Internal problem',
-    'Reparation',
-  ];
+  int? _selectedVisitStatusId;
+
+
+  @override
+void initState() {
+  super.initState();
+
+  _numberController = TextEditingController(text: widget.visit.residencyNumber);
+  // Format the appointment date/time
+  String timeFrom = '08:00 AM';
+  String timeTo = '12:00 PM';
+
+  if (widget.visit.shiftDescription != null) {
+    final description = widget.visit.shiftDescription!;
+    // Parse descriptions like "7:30-10:00 AM", "3:30-6:00 PM", "7:30 AM -10:00 PM"
+    
+    if (description.contains('-')) {
+      final parts = description.split('-');
+      if (parts.length == 2) {
+        timeFrom = parts[0].trim();
+        timeTo = parts[1].trim();
+      }
+    }
+  }
+
+  _visitData = {
+    'timeFrom': timeFrom,
+    'timeTo': timeTo,
+    'contractNumber': widget.visit.contractNumber,
+    'customerName': widget.visit.customerName,
+    'residencyNumber': widget.visit.residencyNumber,
+    'statusType': widget.visit.statusType,
+    'laborName': widget.visit.workers.isNotEmpty ? widget.visit.workers.first : 'N/A',
+    'serviceName': widget.visit.serviceName,
+    'nationality': widget.visit.groupName,
+  };
+  
+  // Load address details
+  _loadAddressDetails();
+  _loadVisitStatuses();
+}
+
+Future<void> _loadAddressDetails() async {
+  setState(() {
+    _isLoadingAddress = true;
+  });
+
+  try {
+    final addressDetails = await ApiService.getCustomerAddressDetails(widget.visit.addressId);
+    if (addressDetails != null) {
+      setState(() {
+        _addressDetails = addressDetails;
+      });
+    }
+  } catch (e) {
+    print('Error loading address details: $e');
+  } finally {
+    setState(() {
+      _isLoadingAddress = false;
+    });
+  }
+}
+
+Future<void> _loadVisitStatuses() async {
+  setState(() {
+    _isLoadingStatuses = true;
+  });
+
+  try {
+    final visitStatusesResult = await ApiService.getVisitStatuses();
+    setState(() {
+      _visitStatuses = visitStatusesResult ?? [];
+    });
+  } catch (e) {
+    print('Error loading visit statuses: $e');
+    // Optionally show error to user
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to load visit statuses'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } finally {
+    setState(() {
+      _isLoadingStatuses = false;
+    });
+  }
+}
 
   @override
   void dispose() {
@@ -56,75 +129,241 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   }
 
   void _showVisitStatusDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.5),
-      builder: (BuildContext context) {
-        return Stack(
-          children: [
-            Center(
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
-                child: Dialog(
-                  backgroundColor: Colors.white,
-                  insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+  if (_visitStatuses.isEmpty && !_isLoadingStatuses) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Visit statuses not loaded yet. Please try again.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black.withOpacity(0.5),
+    builder: (BuildContext context) {
+      return Stack(
+        children: [
+          Center(
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
+              child: Dialog(
+                backgroundColor: Colors.white,
+                insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
                   ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.8,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Choose Visit Status',
-                          style: TextStyle(
-                            color: Color(0xFF05ABD7),
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                          ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Choose Visit Status',
+                        style: TextStyle(
+                          color: Color(0xFF05ABD7),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 24),
-                        
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      if (_isLoadingStatuses)
+                        const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF05ABD7),
+                          ),
+                        )
+                      else
                         Flexible(
                           child: SingleChildScrollView(
                             child: Column(
-                              children: _visitStatuses.map((option) => Column(
-                                children: [
-                                  _buildDialogOption(
-                                    option, 
-                                    _selectedVisitStatus, 
-                                    (value) {
-                                      setState(() {
-                                        _selectedVisitStatus = value;
-                                      });
-                                      Navigator.of(context).pop();
-                                    },
-                                    isSelected: option == 'All' && _selectedVisitStatus == null,
-                                    isAllOption: option == 'All',
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                              )).toList(),
+                              children: [
+                                // "All" option
+                                _buildDialogOption(
+                                  'All', 
+                                  _selectedVisitStatus, 
+                                  (value) {
+                                    setState(() {
+                                      _selectedVisitStatus = null;
+                                      _selectedVisitStatusId = null; // Add this line
+                                    });
+                                    Navigator.of(context).pop();
+                                  },
+                                  isSelected: _selectedVisitStatus == null,
+                                  isAllOption: true,
+                                ),
+                                const SizedBox(height: 12),
+                                
+                                // Dynamic visit status options from API
+                                ..._visitStatuses.map((status) => Column(
+                                  children: [
+                                    _buildDialogOption(
+                                      status['status_name'] ?? 'Unknown Status',
+                                      _selectedVisitStatus,
+                                      (value) {
+                                        setState(() {
+                                          _selectedVisitStatus = value;
+                                          _selectedVisitStatusId = status['id']; // Add this line
+                                        });
+                                        Navigator.of(context).pop();
+                                      },
+                                      isSelected: _selectedVisitStatus == status['status_name'],
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                )).toList(),
+                              ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _handleUpdate() async {
+  // Validate that at least visit status or notes is provided
+  if (_selectedVisitStatusId == null && _notesController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please select a visit status or enter notes'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  setState(() {
+    _isUpdating = true;
+  });
+
+  try {
+    final result = await ApiService.updateAppointment(
+      appointmentId: widget.visit.appointmentId,
+      visitStatusId: _selectedVisitStatusId,
+      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+    );
+
+    if (result['success']) {
+      // Use the message from API response
+      final message = result['data']?['message'] ?? 'Update completed successfully';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      // Use the error message from API response
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('An error occurred: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() {
+      _isUpdating = false;
+    });
+  }
+}
+
+Future<void> _handleUpdateLocation() async {
+  setState(() {
+    _isUpdating = true;
+  });
+
+  try {
+    // Get current location
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showErrorSnackBar('Location permissions are denied');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showErrorSnackBar('Location permissions are permanently denied');
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Format location as JSON string with reduced precision to avoid buffer overflow
+    final longitude = double.parse(position.longitude.toStringAsFixed(6));
+    final latitude = double.parse(position.latitude.toStringAsFixed(6));
+    String locationJson = '{"longitude": $longitude, "latitude": $latitude}';
+
+    // Call the update appointment API with location only
+    final result = await ApiService.updateAppointment(
+      appointmentId: widget.visit.appointmentId,
+      location: locationJson,
+    );
+
+    if (result['success']) {
+      final message = result['data']?['message'] ?? 'Location updated successfully';
+      _showSuccessSnackBar(message);
+    } else {
+      _showErrorSnackBar(result['error']);
+    }
+  } catch (e) {
+    print('Error updating location: $e');
+    _showErrorSnackBar('Failed to update location. Please try again.');
+  } finally {
+    setState(() {
+      _isUpdating = false;
+    });
+  }
+}
+
+// Add these helper methods for showing messages
+void _showErrorSnackBar(String message) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
+}
+
+void _showSuccessSnackBar(String message) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+}
 
   Widget _buildDialogOption(String text, String? selectedValue, Function(String) onTap, {bool isSelected = false, bool isAllOption = false}) {
     final bool selected = isSelected || selectedValue == text;
@@ -419,41 +658,31 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
             child: Stack(
               children: [
-                // Menu icon
+                // Arrow icon
                 Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: SvgPicture.asset(
-                      'assets/icons/menu.svg',
-                      width: 16,
-                      height: 16,
-                      color: Colors.white,
-                    ),
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Icon(
+                    Icons.arrow_back_ios,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
+              ),
                 // Title
                 const Center(
                   child: Text(
-                    'Update Location',
+                    'Visit Details',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 24,
                     ),
-                  ),
-                ),
-                // Arrow icon
-                const Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white,
-                    size: 20,
                   ),
                 ),
               ],
@@ -505,44 +734,57 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
 
                 // Address Card
                 _buildInfoCard(
-                  'Address',
-                  [
-                    {'label': 'House Type', 'value': _visitData['houseType']},
-                    {'label': 'House Number', 'value': _visitData['houseNumber']},
-                    {'label': 'Stage Number', 'value': _visitData['stageNumber']},
-                    {'label': 'Apartment Number', 'value': _visitData['apartmentNumber']},
-                    {'label': 'Notes', 'value': _visitData['notes']},
-                  ],
-                ),
+                'Address',
+                [
+                  if (_isLoadingAddress)
+                    {'label': 'Loading...', 'value': 'Please wait'}
+                  else if (_addressDetails != null) ...[
+                    {'label': 'House Type', 'value': _addressDetails!['house_type'] ?? 'N/A'},
+                    {'label': 'Building Number', 'value': _addressDetails!['building_number'] ?? 'N/A'},
+                    {'label': 'Floor Number', 'value': _addressDetails!['floor_number']?.toString() ?? 'N/A'},
+                    {'label': 'Apartment Number', 'value': _addressDetails!['apartment_number'] ?? 'N/A'},
+                    {'label': 'Notes', 'value': _addressDetails!['card_text'] ?? 'N/A'},
+                  ]
+                  else
+                    {'label': 'Address', 'value': 'Failed to load address details'},
+                ],
+              ),
 
                 const SizedBox(height: 24),
 
                 // Update Location Button
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Handle update location action
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF05ABD7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      elevation: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isUpdating ? null : _handleUpdateLocation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF05ABD7),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
                     ),
-                    child: const Text(
-                      'Update Location',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    elevation: 2,
                   ),
+                  child: _isUpdating
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Update Location',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                 ),
+              ),
 
                 const SizedBox(height: 24),
 
@@ -571,33 +813,37 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
 
                 // Update Button
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Handle update action
-                      print('Visit Status: $_selectedVisitStatus');
-                      print('Number: ${_numberController.text}');
-                      print('Notes: ${_notesController.text}');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF05ABD7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      elevation: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isUpdating ? null : _handleUpdate,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF05ABD7),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
                     ),
-                    child: const Text(
-                      'Update',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    elevation: 2,
                   ),
+                  child: _isUpdating
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Update',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                 ),
+              ),
               ],
             ),
           ),
