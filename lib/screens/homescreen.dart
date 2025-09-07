@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+
 import 'package:driver/widgets/date_card.dart';
 import 'package:driver/widgets/day_item.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -14,6 +16,7 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xfff5f8fe),
+      drawer: _buildDrawer(context), // 🔹 Drawer added
       body: SafeArea(
         child: Column(
           children: [
@@ -37,9 +40,20 @@ class HomePage extends StatelessWidget {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Icon(Icons.menu, color: Colors.white, size: 28),
-                        Text(
+                      children: [
+                        Builder(
+                          builder: (context) => IconButton(
+                            icon: const Icon(
+                              Icons.menu,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            onPressed: () {
+                              Scaffold.of(context).openDrawer();
+                            },
+                          ),
+                        ),
+                        const Text(
                           "Home",
                           style: TextStyle(
                             color: Colors.white,
@@ -47,19 +61,18 @@ class HomePage extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(width: 28),
+                        const SizedBox(width: 28),
                       ],
                     ),
                   ),
 
-                  // Calendar section
                   // Calendar section
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       vertical: 12,
                       horizontal: 16,
-                    ), // horizontal padding
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: const BorderRadius.only(
@@ -88,7 +101,7 @@ class HomePage extends StatelessWidget {
                               },
                             ),
                             Text(
-                              DateFormat("MMMM").format(today), // current month
+                              DateFormat("MMMM").format(today),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -117,7 +130,7 @@ class HomePage extends StatelessWidget {
                               return DayItem(
                                 day: dayLabel,
                                 date: DateFormat('d').format(date),
-                                selected: index == 0, // today selected
+                                selected: index == 0,
                               );
                             }),
                           ),
@@ -162,20 +175,16 @@ class HomePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SizedBox(
-                width: double.infinity, // match DateCard width
-                height: 80, // match DateCard height
+                width: double.infinity,
+                height: 80,
                 child: ElevatedButton(
                   onPressed: () {
                     // TODO: Implement custom date action
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFF05ABD7,
-                    ), // same blue as header
+                    backgroundColor: const Color(0xFF05ABD7),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        16,
-                      ), // similar to DateCard
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: const Text(
@@ -192,6 +201,67 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // 🔹 Drawer Widget
+  Drawer _buildDrawer(BuildContext context) {
+    return Drawer(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          const CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.grey,
+            child: Icon(Icons.person, size: 50, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "Narmin Zain",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+
+          _drawerItem("Home", "assets/icons/home.svg"),
+          _drawerItem("App Permission", "assets/icons/permission.svg"),
+          _drawerItem("Language", "assets/icons/language.svg"),
+          _drawerItem("Logout", "assets/icons/logout.svg"),
+          const Spacer(),
+          _drawerItem(
+            "Delete Account",
+            "assets/icons/delete.svg",
+            textColor: Colors.red,
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _drawerItem(
+    String title,
+    String iconPath, {
+    Color textColor = Colors.black,
+  }) {
+    return ListTile(
+      leading: SvgPicture.asset(iconPath, height: 22, color: textColor),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: textColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: () {
+        // TODO: Add navigation logic
+      },
     );
   }
 }
