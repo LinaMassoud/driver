@@ -236,6 +236,7 @@ class HomePage extends StatelessWidget {
             "Delete Account",
             "assets/icons/delete.svg",
             textColor: Colors.red,
+            iconColor: Colors.red,
           ),
           const SizedBox(height: 20),
         ],
@@ -247,7 +248,8 @@ class HomePage extends StatelessWidget {
     String title,
     String iconPath, {
     Color textColor = Colors.black,
-    double iconSize = 21, // you can adjust between 20 or 21
+    double iconSize = 21,
+    Color? iconColor, // you can adjust between 20 or 21
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20), // optional
@@ -256,7 +258,9 @@ class HomePage extends StatelessWidget {
         child: SvgPicture.asset(
           iconPath,
           height: iconSize,
-          color: const Color.fromRGBO(5, 171, 215, 1), // your RGBA color
+          color:
+              iconColor ??
+              const Color.fromRGBO(5, 171, 215, 1), // your RGBA color
         ),
       ),
       title: Text(
