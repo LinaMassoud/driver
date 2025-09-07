@@ -59,7 +59,7 @@ class HomePage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                       vertical: 12,
                       horizontal: 16,
-                    ), // added horizontal padding
+                    ), // horizontal padding
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: const BorderRadius.only(
@@ -77,12 +77,30 @@ class HomePage extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        Text(
-                          DateFormat("MMMM").format(today), // current month
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        // Month row with arrows
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_left),
+                              onPressed: () {
+                                // TODO: Implement previous month action
+                              },
+                            ),
+                            Text(
+                              DateFormat("MMMM").format(today), // current month
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_right),
+                              onPressed: () {
+                                // TODO: Implement next month action
+                              },
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         // 🔥 Dynamic week row
@@ -137,6 +155,39 @@ class HomePage extends StatelessWidget {
               label: "Tomorrow",
               day: DateFormat("dd").format(tomorrow),
               date: dateFormatter.format(tomorrow),
+            ),
+            const SizedBox(height: 20),
+
+            // Custom Date Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity, // match DateCard width
+                height: 80, // match DateCard height
+                child: ElevatedButton(
+                  onPressed: () {
+                    // TODO: Implement custom date action
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(
+                      0xFF05ABD7,
+                    ), // same blue as header
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        16,
+                      ), // similar to DateCard
+                    ),
+                  ),
+                  child: const Text(
+                    "Custom Date",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
