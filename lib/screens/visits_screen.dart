@@ -10,7 +10,11 @@ import '../models/visit_model.dart';
 import 'package:geolocator/geolocator.dart';
 
 class DriverVisitsScreen extends StatefulWidget {
-  const DriverVisitsScreen({Key? key}) : super(key: key);
+  final String? selectedDate;
+  const DriverVisitsScreen({
+    Key? key,
+    this.selectedDate,
+  }) : super(key: key);
 
   @override
   State<DriverVisitsScreen> createState() => _DriverVisitsScreenState();
@@ -99,12 +103,13 @@ String? _selectedShiftDescription;
     }
 
     final carId = int.parse(carIdString);
-    final today = "2025-09-07";
+    // Use the passed date or default to today's date
+    final String dateToUse = widget.selectedDate ?? _getTodayDateString();
 
     final result = await ApiService.getVisits(
       carId: carId,
       shiftId: _selectedShiftTypeId!,
-      date: today,
+      date: dateToUse,
     );
 
     if (result != null) {
@@ -151,6 +156,10 @@ String? _selectedShiftDescription;
       _isLoading = false;
     });
   }
+}
+String _getTodayDateString() {
+  final now = DateTime.now();
+  return "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 }
 
 Future<void> _makePhoneCall(String phoneNumber) async {
