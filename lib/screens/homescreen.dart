@@ -53,15 +53,27 @@ class HomePage extends StatelessWidget {
                   ),
 
                   // Calendar section
+                  // Calendar section
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ), // added horizontal padding
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.only(
+                      borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(20),
                         bottomRight: Radius.circular(20),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromRGBO(30, 73, 160, 0.2),
+                          offset: const Offset(0, 4),
+                          blurRadius: 10,
+                          spreadRadius: 0,
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
