@@ -222,14 +222,21 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            "Narmin Zain",
+            "Lina Massoud",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
 
           _drawerItem("Home", "assets/icons/home.svg"),
           _drawerItem("App Permission", "assets/icons/permission.svg"),
-          _drawerItem("Language", "assets/icons/language.svg"),
+          _drawerItem(
+            "Language",
+            "assets/icons/language.svg",
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/language');
+            },
+          ),
           _drawerItem("Logout", "assets/icons/logout.svg"),
           const Spacer(),
           _drawerItem(
@@ -249,7 +256,8 @@ class HomePage extends StatelessWidget {
     String iconPath, {
     Color textColor = Colors.black,
     double iconSize = 21,
-    Color? iconColor, // you can adjust between 20 or 21
+    Color? iconColor,
+    VoidCallback? onTap, // you can adjust between 20 or 21
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20), // optional
@@ -271,9 +279,7 @@ class HomePage extends StatelessWidget {
           fontWeight: FontWeight.w500,
         ),
       ),
-      onTap: () {
-        // TODO: Add navigation logic
-      },
+      onTap: onTap,
     );
   }
 }
