@@ -20,23 +20,97 @@ class HomePage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Header + Calendar unified
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFF05ABD7),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+            Stack(
+              children: [
+                // Calendar background
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromRGBO(30, 73, 160, 0.2),
+                        offset: const Offset(0, 4),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.only(
+                    top: 80,
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                  ),
+                  child: Column(
+                    mainAxisSize:
+                        MainAxisSize.min, // important to avoid overflow
+                    children: [
+                      // Month row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_left),
+                            onPressed: () {},
+                            iconSize: 24,
+                          ),
+                          Text(
+                            DateFormat("MMMM").format(today),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_right),
+                            onPressed: () {},
+                            iconSize: 24,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Week row
+                      Flexible(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: List.generate(7, (index) {
+                            final date = today.add(Duration(days: index));
+                            final dayLabel = DateFormat(
+                              'E',
+                            ).format(date).substring(0, 1);
+                            return DayItem(
+                              day: dayLabel,
+                              date: DateFormat('d').format(date),
+                              selected: index == 0,
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  // Header
-                  Padding(
+
+                // Header floating on top remains the same
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 16,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF05ABD7),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -48,9 +122,7 @@ class HomePage extends StatelessWidget {
                               color: Colors.white,
                               size: 28,
                             ),
-                            onPressed: () {
-                              Scaffold.of(context).openDrawer();
-                            },
+                            onPressed: () => Scaffold.of(context).openDrawer(),
                           ),
                         ),
                         const Text(
@@ -65,81 +137,8 @@ class HomePage extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Calendar section
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromRGBO(30, 73, 160, 0.2),
-                          offset: const Offset(0, 4),
-                          blurRadius: 10,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Month row with arrows
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_left),
-                              onPressed: () {
-                                // TODO: Implement previous month action
-                              },
-                            ),
-                            Text(
-                              DateFormat("MMMM").format(today),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_right),
-                              onPressed: () {
-                                // TODO: Implement next month action
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        // 🔥 Dynamic week row
-                        SizedBox(
-                          height: 80,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: List.generate(7, (index) {
-                              final date = today.add(Duration(days: index));
-                              final dayLabel = DateFormat(
-                                'E',
-                              ).format(date).substring(0, 1);
-
-                              return DayItem(
-                                day: dayLabel,
-                                date: DateFormat('d').format(date),
-                                selected: index == 0,
-                              );
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 20),
@@ -248,9 +247,18 @@ class HomePage extends StatelessWidget {
     String title,
     String iconPath, {
     Color textColor = Colors.black,
+    double iconSize = 21, // you can adjust between 20 or 21
   }) {
     return ListTile(
-      leading: SvgPicture.asset(iconPath, height: 22, color: textColor),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20), // optional
+      leading: Padding(
+        padding: const EdgeInsets.only(bottom: 2), // slightly lower
+        child: SvgPicture.asset(
+          iconPath,
+          height: iconSize,
+          color: const Color.fromRGBO(5, 171, 215, 1), // your RGBA color
+        ),
+      ),
       title: Text(
         title,
         style: TextStyle(
