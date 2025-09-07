@@ -3,6 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'visit_details.dart';
+import '../services/api_service.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../models/visit_model.dart';
+import 'package:geolocator/geolocator.dart';
 
 class DriverVisitsScreen extends StatefulWidget {
   const DriverVisitsScreen({Key? key}) : super(key: key);
@@ -14,99 +19,139 @@ class DriverVisitsScreen extends StatefulWidget {
 class _DriverVisitsScreenState extends State<DriverVisitsScreen> {
   Set<String> expandedVisits = {};
   bool _showVisits = false;
-String? _selectedOrderType;
-String? _selectedShiftType;
-String? _selectedVisitStatus;
+  bool _isLoading = false;
+  
+  // Selected values with IDs
+  int? _selectedOrderTypeId;
+  String? _selectedOrderType;
+  
+  int? _selectedShiftTypeId;
+  String? _selectedShiftType;
+  
+  int? _selectedVisitStatusId;
+  String? _selectedVisitStatus;
 
-// Add these dropdown options as class variables:
-final List<String> _orderTypes = [
-  'Order by delivery No.',
-  'Order by Google', 
-  'Order by Manual'
-];
+  // API data lists
+  List<Map<String, dynamic>> _orderTypes = [];
+  List<Map<String, dynamic>> _shiftTypes = [];
+  List<Map<String, dynamic>> _visitStatuses = [];
+  
+  // Visits data
+  List<Map<String, dynamic>> _visits = [];
 
-final List<String> _shiftTypes = [
-  'Shift Type 1', 
-  'Shift Type 2', 
-  'Shift Type 3'
-]; // You can update these with actual shift type names
+  Map<String, int> _nationalityStats = {};
+int _totalVisits = 0;
 
-final List<String> _visitStatuses = [
-  'All',
-  'New',
-  'Arrived',
-  'Arrived to deliver',
-  'Start',
-  'Finished - Done',
-  'Finished - Notfound',
-  'Free visit cancelled',
-  'Not finished - Internal problem',
-  'Reparation',
-];
+String? _selectedShiftDescription;
 
-  // Hardcoded data based on the image
-  final List<Map<String, dynamic>> _hardcodedVisits = [
-  {
-    'id': '1',
-    'workerName': 'Narmin zain - Addamam',
-    'timeSlot': 'From 08:00AM To 12:00PM',
-    'totalVisits': 6,
-    'address': 'Al Malaz, Riyadh 12635, Saudi Arabia',
-    'latitude': 24.7136,
-    'longitude': 46.6753,
-    'nationalities': {'East Asia': 6},
-    'workers': [
-      {
-        'name': 'Jovelyn Nativadid Capirial (East Asia)',
-        'price': '90.0 SAR',
-        'duration': 'Fawran 4 Hours',
-        'contractId': 'HS738759',
-        'status': 'Paid',
-        'bookingStatus': 'New'
-      }
-    ]
-  },
-  {
-    'id': '2',
-    'workerName': 'Narmin zain - Addamam',
-    'timeSlot': 'From 08:00AM To 12:00PM',
-    'totalVisits': 6,
-    'address': 'King Fahd District, Riyadh 12271, Saudi Arabia',
-    'latitude': 24.6877,
-    'longitude': 46.7219,
-    'nationalities': {'East Asia': 6},
-    'workers': [
-      {
-        'name': 'Jovelyn Nativadid Capirial (East Asia)',
-        'price': '90.0 SAR',
-        'duration': 'Fawran 4 Hours',
-        'contractId': 'HS738759',
-        'status': 'Paid',
-        'bookingStatus': 'New'
-      }
-    ]
-  },
-  {
-    'id': '3',
-    'workerName': 'Narmin zain - Addamam',
-    'timeSlot': 'From 08:00AM To 12:00PM',
-    'totalVisits': 6,
-    'address': 'Al Olaya, Riyadh 12213, Saudi Arabia',
-    'latitude': 24.6951,
-    'longitude': 46.6851,
-    'nationalities': {'East Asia': 6},
-    'workers': [
-      {
-        'name': 'Jovelyn Nativadid Capirial (East Asia)',
-        'price': '90.0 SAR',
-        'duration': 'Fawran 4 Hours',
-        'contractId': 'HS738759',
-        'status': 'Paid',
-        'bookingStatus': 'New'
-      }
-    ]
+  @override
+  void initState() {
+    super.initState();
+    _loadDropdownData();
   }
-];
+
+  Future<void> _loadDropdownData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Load all dropdown data
+      final orderTypesResult = await ApiService.getOrderTypes();
+      final shiftsResult = await ApiService.getShifts();
+      final visitStatusesResult = await ApiService.getVisitStatuses();
+
+      setState(() {
+        _orderTypes = orderTypesResult ?? [];
+        _shiftTypes = shiftsResult ?? [];
+        _visitStatuses = visitStatusesResult ?? [];
+      });
+    } catch (e) {
+      print('Error loading dropdown data: $e');
+      _showErrorSnackBar('Failed to load data. Please try again.');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchVisits() async {
+  if (_selectedShiftTypeId == null) {
+    _showErrorSnackBar('Please select a shift type');
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _showVisits = false; // Hide the content while loading
+    _nationalityStats.clear(); // Clear previous stats
+    _totalVisits = 0;
+  });
+
+  try {
+    // Get car_id from secure storage
+    const FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    final carIdString = await secureStorage.read(key: 'car_id');
+    if (carIdString == null) {
+      _showErrorSnackBar('Car ID not found. Please login again.');
+      return;
+    }
+
+    final carId = int.parse(carIdString);
+    final today = "2025-09-07";
+
+    final result = await ApiService.getVisits(
+      carId: carId,
+      shiftId: _selectedShiftTypeId!,
+      date: today,
+    );
+
+    if (result != null) {
+      // Check if result is a Map with error key
+      if (result is Map && result.containsKey('error')) {
+        _showErrorSnackBar(result['error']);
+      } else {
+        List<Map<String, dynamic>> visits = [];
+        
+        // Handle both response formats:
+        // 1. Direct array response: []
+        // 2. Object with visits key: {"visits": [...]}
+        if (result is List) {
+          visits = result.cast<Map<String, dynamic>>();
+        } else if (result is Map && result.containsKey('visits')) {
+          visits = (result['visits'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        }
+
+        // Calculate nationality statistics from the visits data
+        Map<String, int> nationalityCount = {};
+        
+        for (var visit in visits) {
+          final groupName = visit['GROUP_NAME']?.toString().trim();
+          if (groupName != null && groupName.isNotEmpty) {
+            nationalityCount[groupName] = (nationalityCount[groupName] ?? 0) + 1;
+          }
+        }
+
+        setState(() {
+          _visits = visits;
+          _nationalityStats = nationalityCount;
+          _totalVisits = visits.length;
+          _showVisits = true;
+        });
+      }
+    } else {
+      _showErrorSnackBar('Failed to fetch visits');
+    }
+  } catch (e) {
+    print('Error fetching visits: $e');
+    _showErrorSnackBar('Failed to fetch visits. Please try again.');
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
 
 Future<void> _makePhoneCall(String phoneNumber) async {
   final Uri launchUri = Uri(
@@ -132,6 +177,11 @@ Future<void> _makePhoneCall(String phoneNumber) async {
 // Add these methods to your _DriverVisitsScreenState class:
 
 void _showOrderTypeDialog(BuildContext context) {
+  if (_orderTypes.isEmpty) {
+    _showErrorSnackBar('Order types not loaded yet. Please wait...');
+    return;
+  }
+
   showDialog(
     context: context,
     barrierDismissible: true,
@@ -144,12 +194,12 @@ void _showOrderTypeDialog(BuildContext context) {
               filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
               child: Dialog(
                 backgroundColor: Colors.white,
-                insetPadding: const EdgeInsets.symmetric(horizontal: 20), // Override default insets
+                insetPadding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Container(
-                  width: double.infinity, // Take full available width
+                  width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -164,29 +214,25 @@ void _showOrderTypeDialog(BuildContext context) {
                       ),
                       const SizedBox(height: 24),
                       
-                      // Order type options
-                      _buildDialogOption('Order by delivery No.', _selectedOrderType, (value) {
-                        setState(() {
-                          _selectedOrderType = value;
-                        });
-                        Navigator.of(context).pop();
-                      }, isSelected: _selectedOrderType == 'Order by delivery No.'),
-                      const SizedBox(height: 12),
-                      
-                      _buildDialogOption('Order by Google', _selectedOrderType, (value) {
-                        setState(() {
-                          _selectedOrderType = value;
-                        });
-                        Navigator.of(context).pop();
-                      }, isSelected: _selectedOrderType == 'Order by Google'),
-                      const SizedBox(height: 12),
-                      
-                      _buildDialogOption('Order by Manual', _selectedOrderType, (value) {
-                        setState(() {
-                          _selectedOrderType = value;
-                        });
-                        Navigator.of(context).pop();
-                      }, isSelected: _selectedOrderType == 'Order by Manual'),
+                      // Dynamic order type options from API
+                      ..._orderTypes.map((orderType) => Column(
+                        children: [
+                          _buildDialogOption(
+                            orderType['order_type'],
+                            _selectedOrderType,
+                            (value) {
+                              setState(() {
+                                _selectedOrderType = value;
+                                _selectedOrderTypeId = orderType['id'];
+                              });
+                              _resetVisitsDisplay();
+                              Navigator.of(context).pop();
+                            },
+                            isSelected: _selectedOrderTypeId == orderType['id'],
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      )).toList(),
                     ],
                   ),
                 ),
@@ -201,6 +247,11 @@ void _showOrderTypeDialog(BuildContext context) {
 
 
 void _showShiftTypeDialog(BuildContext context) {
+  if (_shiftTypes.isEmpty) {
+    _showErrorSnackBar('Shift types not loaded yet. Please wait...');
+    return;
+  }
+
   showDialog(
     context: context,
     barrierDismissible: true,
@@ -213,12 +264,12 @@ void _showShiftTypeDialog(BuildContext context) {
               filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
               child: Dialog(
                 backgroundColor: Colors.white,
-                insetPadding: const EdgeInsets.symmetric(horizontal: 20), // Override default insets
+                insetPadding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Container(
-                  width: double.infinity, // Take full available width
+                  width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -233,29 +284,26 @@ void _showShiftTypeDialog(BuildContext context) {
                       ),
                       const SizedBox(height: 24),
                       
-                      // Shift type options
-                      _buildDialogOption('Shift Type 1', _selectedShiftType, (value) {
-                        setState(() {
-                          _selectedShiftType = value;
-                        });
-                        Navigator.of(context).pop();
-                      }, isSelected: _selectedShiftType == 'Shift Type 1'),
-                      const SizedBox(height: 12),
-                      
-                      _buildDialogOption('Shift Type 2', _selectedShiftType, (value) {
-                        setState(() {
-                          _selectedShiftType = value;
-                        });
-                        Navigator.of(context).pop();
-                      }, isSelected: _selectedShiftType == 'Shift Type 2'),
-                      const SizedBox(height: 12),
-                      
-                      _buildDialogOption('Shift Type 3', _selectedShiftType, (value) {
-                        setState(() {
-                          _selectedShiftType = value;
-                        });
-                        Navigator.of(context).pop();
-                      }, isSelected: _selectedShiftType == 'Shift Type 3'),
+                      // Dynamic shift type options from API
+                      ..._shiftTypes.map((shiftType) => Column(
+                        children: [
+                          _buildDialogOption(
+                            '${shiftType['service_shifts']}',
+                            _selectedShiftType,
+                            (value) {
+                              setState(() {
+                                _selectedShiftType = value;
+                                _selectedShiftTypeId = shiftType['id'];
+                                _selectedShiftDescription = shiftType['description'];
+                              });
+                              _resetVisitsDisplay();
+                              Navigator.of(context).pop();
+                            },
+                            isSelected: _selectedShiftTypeId == shiftType['id'],
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      )).toList(),
                     ],
                   ),
                 ),
@@ -269,18 +317,10 @@ void _showShiftTypeDialog(BuildContext context) {
 }
 
 void _showVisitStatusDialog(BuildContext context) {
-  final List<String> statusOptions = [
-    'All',
-    'New',
-    'Arrived',
-    'Arrived to deliver',
-    'Start',
-    'Finished - Done',
-    'Finished - Notfound',
-    'Free visit cancelled',
-    'Not finished - Internal problem',
-    'Reparation',
-  ];
+  if (_visitStatuses.isEmpty) {
+    _showErrorSnackBar('Visit statuses not loaded yet. Please wait...');
+    return;
+  }
 
   showDialog(
     context: context,
@@ -294,15 +334,15 @@ void _showVisitStatusDialog(BuildContext context) {
               filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
               child: Dialog(
                 backgroundColor: Colors.white,
-                insetPadding: const EdgeInsets.symmetric(horizontal: 20), // Override default insets
+                insetPadding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Container(
-                  width: double.infinity, // Take full available width
+                  width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.8, // Limit dialog height
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -317,27 +357,47 @@ void _showVisitStatusDialog(BuildContext context) {
                       ),
                       const SizedBox(height: 24),
                       
-                      // Scrollable options container
                       Flexible(
                         child: SingleChildScrollView(
                           child: Column(
-                            children: statusOptions.map((option) => Column(
-                              children: [
-                                _buildDialogOption(
-                                  option, 
-                                  _selectedVisitStatus, 
-                                  (value) {
-                                    setState(() {
-                                      _selectedVisitStatus = value;
-                                    });
-                                    Navigator.of(context).pop();
-                                  },
-                                  isSelected: option == 'All' && _selectedVisitStatus == null,
-                                  isAllOption: option == 'All',
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            )).toList(),
+                            children: [
+                              // "All" option
+                              _buildDialogOption(
+                                'All',
+                                _selectedVisitStatus,
+                                (value) {
+                                  setState(() {
+                                    _selectedVisitStatus = null;
+                                    _selectedVisitStatusId = null;
+                                  });
+                                  _resetVisitsDisplay();
+                                  Navigator.of(context).pop();
+                                },
+                                isSelected: _selectedVisitStatusId == null,
+                                isAllOption: true,
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Dynamic visit status options from API
+                              ..._visitStatuses.map((status) => Column(
+                                children: [
+                                  _buildDialogOption(
+                                    status['status_name'],
+                                    _selectedVisitStatus,
+                                    (value) {
+                                      setState(() {
+                                        _selectedVisitStatus = value;
+                                        _selectedVisitStatusId = status['id'];
+                                      });
+                                      _resetVisitsDisplay();
+                                      Navigator.of(context).pop();
+                                    },
+                                    isSelected: _selectedVisitStatusId == status['id'],
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              )).toList(),
+                            ],
                           ),
                         ),
                       ),
@@ -382,6 +442,96 @@ void _showErrorSnackBar(String message) {
       ),
     );
   }
+}
+
+Future<void> _handleArriveAction(Map<String, dynamic> visit) async {
+  // Check if visit status is already "Arrived" (status_type contains "Arrive" or visit status is 3)
+  final currentStatusType = visit['STATUS_TYPE']?.toString().toLowerCase() ?? '';
+  if (currentStatusType.contains('arrive')) {
+    _showErrorSnackBar('Visit is already marked as arrived');
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    // Get current location
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showErrorSnackBar('Location permissions are denied');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showErrorSnackBar('Location permissions are permanently denied');
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Format location as JSON string with reduced precision to avoid buffer overflow
+    final longitude = double.parse(position.longitude.toStringAsFixed(6));
+    final latitude = double.parse(position.latitude.toStringAsFixed(6));
+    String locationJson = '{"longitude": $longitude, "latitude": $latitude}';
+
+    // Format current datetime to match server expected format: "2025-09-05T09:00:00.000000"
+    final now = DateTime.now();
+    final formattedDate = "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final formattedTime = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
+    final microseconds = now.microsecond.toString().padLeft(6, '0');
+    final currentDateTime = "${formattedDate}T${formattedTime}.${microseconds}";
+
+    // Call the update appointment API
+    final result = await ApiService.updateAppointment(
+      appointmentId: visit['APPOINTMENT_ID'],
+      visitStatusId: 3, // Arrived status
+      actualStartDatetime: currentDateTime,
+      location: locationJson,
+    );
+
+    if (result['success']) {
+      final message = result['data']?['message'] ?? 'Arrived successfully';
+      _showSuccessSnackBar(message);
+      
+      // Refresh the visits list to show updated status
+      await _fetchVisits();
+    } else {
+      _showErrorSnackBar(result['error']);
+    }
+  } catch (e) {
+    print('Error handling arrive action: $e');
+    _showErrorSnackBar('Failed to mark as arrived. Please try again.');
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
+// Add this helper method for success messages
+void _showSuccessSnackBar(String message) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+}
+
+// Add this method to check if arrive button should be enabled
+bool _canArrive(Map<String, dynamic> visit) {
+  final currentStatusType = visit['STATUS_TYPE']?.toString().toLowerCase() ?? '';
+  // Enable arrive button only if status is not already "Arrived"
+  return !currentStatusType.contains('arrive');
 }
 
 Widget _buildDialogOption(String text, String? selectedValue, Function(String) onTap, {bool isSelected = false, bool isAllOption = false}) {
@@ -442,8 +592,18 @@ Container(
   );
 }
   Widget _buildVisitCard(Map<String, dynamic> visit) {
-  final visitId = visit['id'].toString();
+  final visitId = visit['SERVICE_CONTRACT_ID'].toString();
   final isExpanded = expandedVisits.contains(visitId);
+
+  print("Selected shift description: $_selectedShiftDescription");
+
+  String timeSlot = _selectedShiftDescription ?? 'Time not available';
+
+  // Get workers list
+  List<String> workersList = [];
+  if (visit['WORKERS'] != null && visit['WORKERS'] is List) {
+    workersList = (visit['WORKERS'] as List).cast<String>();
+  }
 
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -466,14 +626,15 @@ Container(
           // Main card content - wrapped in GestureDetector for navigation
           GestureDetector(
             onTap: () {
-              // Navigate to visit details screen
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const VisitDetailsScreen(),
-                ),
-              );
-            },
+          // Create Visit object and navigate to visit details screen
+          final visitObj = Visit.fromJson(visit, shiftDescription: _selectedShiftDescription);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VisitDetailsScreen(visit: visitObj),
+            ),
+          );
+        },
             child: Column(
               children: [
                 // Header section
@@ -546,7 +707,7 @@ Container(
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        visit['workerName'],
+                                        visit['CUSTOMER_NAME'] ?? 'Customer name not available',
                                         style: const TextStyle(
                                           color: Color(0xFF05ABD7),
                                           fontSize: 14,
@@ -566,7 +727,7 @@ Container(
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      visit['timeSlot'],
+                                      timeSlot,
                                       style: const TextStyle(
                                         color: Color(0xFF05ABD7),
                                         fontSize: 12,
@@ -605,83 +766,86 @@ Container(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Worker details directly in the expanded area
-                              ...visit['workers'].map<Widget>((worker) {
-                                return Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        SvgPicture.asset(
-                                          'assets/icons/worker.svg',
-                                          width: 16,
-                                          height: 16,
-                                          colorFilter: ColorFilter.mode(Color(0xFF00BCD4), BlendMode.srcIn),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Expanded(
-                                          child: Text(
-                                            worker['name'],
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF091735),
+                              // Workers section
+                              if (workersList.isNotEmpty)
+                                ...workersList.map<Widget>((workerName) {
+                                  return Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          SvgPicture.asset(
+                                            'assets/icons/worker.svg',
+                                            width: 16,
+                                            height: 16,
+                                            colorFilter: ColorFilter.mode(Color(0xFF00BCD4), BlendMode.srcIn),
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Expanded(
+                                            child: Text(
+                                              '${workerName.trim()} (${visit['GROUP_NAME'] ?? 'N/A'})',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF091735),
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                  );
+                                }).toList(),
+                              
+                              // Contract and service details in grid format
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDetailItem(
+                                      Icons.attach_money,
+                                      '${visit['TOTAL_PRICE']  ?? '0'} SAR',
                                     ),
-                                    const SizedBox(height: 12),
-                                    
-                                    // Details in grid format
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildDetailItem(
-                                            Icons.attach_money,
-                                            worker['price'],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: _buildDetailItem(
-                                            Icons.access_time,
-                                            worker['duration'],
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                  Expanded(
+                                    child: _buildDetailItem(
+                                      Icons.access_time,
+                                      visit['SERVICE_NAME'] ?? 'Service not specified',
                                     ),
-                                    const SizedBox(height: 8),
-                                    
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildDetailItem(
-                                            Icons.receipt,
-                                            worker['contractId'],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: _buildDetailItem(
-                                            Icons.check_circle,
-                                            worker['status'],
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDetailItem(
+                                      Icons.receipt,
+                                      visit['CONTRACT_NUMBER'] ?? 'Contract N/A',
                                     ),
-                                    const SizedBox(height: 8),
-                                    
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildDetailItem(
-                                            Icons.info_outline,
-                                            worker['bookingStatus'],
-                                          ),
-                                        ),
-                                        const Expanded(child: SizedBox()),
-                                      ],
+                                  ),
+                                  Expanded(
+                                    child: _buildDetailItem(
+                                      Icons.check_circle,
+                                      visit['CONTRACT_STATUS'] ?? 'Status N/A',
                                     ),
-                                  ],
-                                );
-                              }).toList(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDetailItem(
+                                      Icons.info_outline,
+                                      visit['STATUS_TYPE'] ?? 'Type N/A',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              
                             ],
                           ),
                         )
@@ -696,14 +860,25 @@ Container(
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () {
-                    // Open maps directly instead of navigating to another screen
+                  onTap: () async {
+                  // Fetch address details to get actual coordinates
+                  final addressDetails = await ApiService.getCustomerAddressDetails(visit['ADDRESS_ID'] ?? 0);
+                  
+                  if (addressDetails != null) {
+                    final latitude = addressDetails['latitude'] ?? 24.7136;
+                    final longitude = addressDetails['longitude'] ?? 46.6753;
+                    final address = addressDetails['card_text'] ?? 'Address ID: ${visit['ADDRESS_ID'] ?? 'N/A'}';
+                    
+                    _openDefaultMaps(latitude, longitude, address);
+                  } else {
+                    // Fallback to default coordinates
                     _openDefaultMaps(
-                      visit['latitude'] ?? 24.7136,
-                      visit['longitude'] ?? 46.6753,
-                      visit['address'] ?? 'Address not available',
+                      24.7136,
+                      46.6753,
+                      'Address ID: ${visit['ADDRESS_ID'] ?? 'N/A'}',
                     );
-                  },
+                  }
+                },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: const BoxDecoration(
@@ -728,7 +903,7 @@ Container(
               Expanded(
                 child: GestureDetector(
                   onTap: () {
-                    _showPhoneDialog(context, '0587583901');
+                    _showPhoneDialog(context, visit['PHONE_NUMBER'] ?? '0000000000');
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -749,31 +924,29 @@ Container(
                 ),
               ),
               Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // Arrive action
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF21C15A),
-                      borderRadius: BorderRadius.only(
-                        bottomRight: Radius.circular(11),
-                      ),
+              child: GestureDetector(
+                onTap: _canArrive(visit) ? () => _handleArriveAction(visit) : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _canArrive(visit) ? const Color(0xFF21C15A) : const Color(0xFF21C15A),
+                    borderRadius: const BorderRadius.only(
+                      bottomRight: Radius.circular(11),
                     ),
-                    child: const Center(
-                      child: Text(
-                        'Arrive',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _canArrive(visit) ? 'Arrive' : 'Arrived',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
               ),
+            ),
             ],
           ),
         ],
@@ -877,6 +1050,16 @@ Container(
   );
 }
 
+void _resetVisitsDisplay() {
+  setState(() {
+    _showVisits = false;
+    _visits.clear();
+    _nationalityStats.clear();
+    _totalVisits = 0;
+    expandedVisits.clear();
+  });
+}
+
 
 
   Widget _buildDetailItem(IconData icon, String text, {Color? statusColor}) {
@@ -917,7 +1100,7 @@ Container(
           style: TextStyle(
             fontSize: 12,
             color: statusColor ?? const Color(0xFF091735),
-            fontWeight: statusColor != null ? FontWeight.w600 : FontWeight.normal,
+            fontWeight: statusColor != null ? FontWeight.w600 : FontWeight.w500,
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -946,16 +1129,15 @@ Container(
             padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
             child: Stack(
               children: [
-                // Menu icon
-                Positioned(
+                // Arrow icon
+                const Positioned(
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  child: SvgPicture.asset(
-                    'assets/icons/menu.svg',
-                    width: 16,
-                    height: 16,
+                  child: Icon(
+                    Icons.arrow_back_ios,
                     color: Colors.white,
+                    size: 20,
                   ),
                 ),
                 // Title
@@ -969,17 +1151,6 @@ Container(
                     ),
                   ),
                 ),
-                // Arrow icon
-                const Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
               ],
             ),
           ),
@@ -990,222 +1161,284 @@ Container(
               padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
               children: [
                 // Order Type Dropdown
-                GestureDetector(
-                  onTap: () => _showOrderTypeDialog(context),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Order Type',
-                                style: TextStyle(
-                                  color: Color(0xFF091735),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (_selectedOrderType != null)
-                                Text(
-                                  _selectedOrderType!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF666666),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.keyboard_arrow_down, color: Color(0xFF666666)),
-                      ],
+               GestureDetector(
+                onTap: () => _showOrderTypeDialog(context),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selectedOrderType != null 
+                          ? const Color(0xFF05ABD7) 
+                          : const Color(0xFFE0E0E0),
+                      width: 1,
                     ),
                   ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedOrderType ?? 'Order Type',
+                          style: TextStyle(
+                            color: _selectedOrderType != null 
+                                ? const Color(0xFF05ABD7) 
+                                : const Color(0xFF091735),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down, 
+                        color: _selectedOrderType != null 
+                            ? const Color(0xFF05ABD7) 
+                            : const Color(0xFF666666),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
 
                 // Shift Type 
                 GestureDetector(
-                  onTap: () => _showShiftTypeDialog(context),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Shift Type',
-                                style: TextStyle(
-                                  color: Color(0xFF091735),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (_selectedShiftType != null)
-                                Text(
-                                  _selectedShiftType!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF666666),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.keyboard_arrow_down, color: Color(0xFF666666)),
-                      ],
+                onTap: () => _showShiftTypeDialog(context),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selectedShiftType != null 
+                          ? const Color(0xFF05ABD7) 
+                          : const Color(0xFFE0E0E0),
+                      width: 1,
                     ),
                   ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedShiftType ?? 'Shift Type',
+                          style: TextStyle(
+                            color: _selectedShiftType != null 
+                                ? const Color(0xFF05ABD7) 
+                                : const Color(0xFF091735),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down, 
+                        color: _selectedShiftType != null 
+                            ? const Color(0xFF05ABD7) 
+                            : const Color(0xFF666666),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
 
                 // Choose Visit Status 
                 GestureDetector(
-                  onTap: () => _showVisitStatusDialog(context),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Choose visit status',
-                                style: TextStyle(
-                                  color: Color(0xFF091735),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (_selectedVisitStatus != null)
-                                Text(
-                                  _selectedVisitStatus!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF666666),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.keyboard_arrow_down, color: Color(0xFF666666)),
-                      ],
+                onTap: () => _showVisitStatusDialog(context),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selectedVisitStatus != null 
+                          ? const Color(0xFF05ABD7) 
+                          : const Color(0xFFE0E0E0),
+                      width: 1,
                     ),
                   ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedVisitStatus ?? 'Choose visit status',
+                          style: TextStyle(
+                            color: _selectedVisitStatus != null 
+                                ? const Color(0xFF05ABD7) 
+                                : const Color(0xFF091735),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down, 
+                        color: _selectedVisitStatus != null 
+                            ? const Color(0xFF05ABD7) 
+                            : const Color(0xFF666666),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
 
                 const SizedBox(height: 8),
 
                 // Show Visits Button
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _showVisits = !_showVisits;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFA200),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      elevation: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _fetchVisits,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFA200),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
                     ),
-                    child: const Text(
-                      'Show Visits',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    elevation: 2,
                   ),
+                  child: _isLoading 
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Show Visits',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                 ),
+              ),
 
                 // Content shown only when _showVisits is true
-                if (_showVisits) ...[
-                  // Number of employees by nationality card
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+                // Show loading indicator while calculating statistics
+              if (_isLoading && _selectedShiftTypeId != null)
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE0E0E0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(
                         color: Color(0xFF05ABD7),
-                        width: 1,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          spreadRadius: 0,
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'fetching visits...',
+                        style: TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 16,
                         ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              // Content shown only when _showVisits is true and not loading
+              else if (_showVisits && !_isLoading) ...[
+                // Number of employees by nationality card
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Color(0xFF05ABD7),
+                      width: 1,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Top section with padding
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Centered title
-                              Center(
-                                child: const Text(
-                                  'Number of employees by nationality',
-                                  style: TextStyle(
-                                    color: Color(0xFF00BCD4),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        spreadRadius: 0,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top section with padding
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Centered title
+                            Center(
+                              child: const Text(
+                                'Number of employees by nationality',
+                                style: TextStyle(
+                                  color: Color(0xFF00BCD4),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              
-                              // Divider
-                              Container(
-                                width: double.infinity,
-                                height: 0.5,
-                                color: Color(0xFFBCBEBF),
-                              ),
-                              const SizedBox(height: 12),
-                              
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Divider
+                            Container(
+                              width: double.infinity,
+                              height: 0.5,
+                              color: Color(0xFFBCBEBF),
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Dynamic nationality statistics
+                            if (_nationalityStats.isNotEmpty)
+                              ..._nationalityStats.entries.map((entry) => 
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        '${entry.key} :',
+                                        style: TextStyle(
+                                          color: Color(0xFF90A3B2),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${entry.value}',
+                                        style: TextStyle(
+                                          color: Color(0xFF90A3B2),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ).toList()
+                            else
+                              // Show placeholder when no data
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'East Asia :',
+                                    'No data available',
                                     style: TextStyle(
                                       color: Color(0xFF90A3B2),
                                       fontSize: 14,
                                     ),
                                   ),
                                   Text(
-                                    '6',
+                                    '0',
                                     style: TextStyle(
                                       color: Color(0xFF90A3B2),
                                       fontSize: 14,
@@ -1214,47 +1447,67 @@ Container(
                                   ),
                                 ],
                               ),
-                            ],
+                          ],
+                        ),
+                      ),
+                      
+                      // Total visits container extending full width
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFE0F8FE),
+                          border: Border(
+                            top: BorderSide(
+                              color: Color(0xFF05ABD7),
+                              width: 1,
+                            ),
+                          ),
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(11),
+                            bottomRight: Radius.circular(11),
                           ),
                         ),
-                        
-                        // Total visits container extending full width
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFE0F8FE),
-                            border: Border(
-                              top: BorderSide(
-                                color: Color(0xFF05ABD7),
-                                width: 1,
-                              ),
-                            ),
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(11),
-                              bottomRight: Radius.circular(11),
-                            ),
-                          ),
-                          child: const Text(
-                            'Total number of visits: 6',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xFF00BCD4),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        child: Text(
+                          'Total number of visits: $_totalVisits',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFF00BCD4),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Visit Cards
+                if (_visits.isNotEmpty)
+                  ...List.generate(
+                    _visits.length,
+                    (index) => _buildVisitCard(_visits[index]),
+                  )
+                else
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No visits found for the selected criteria',
+                        style: TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
-
-                  // Visit Cards
-                  ...List.generate(
-                    _hardcodedVisits.length,
-                    (index) => _buildVisitCard(_hardcodedVisits[index]),
-                  ),
-                ],
+              ],
               ],
             ),
           ),

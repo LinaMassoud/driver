@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/auth_provider.dart';
+import 'visits_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -48,17 +49,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Listen to auth state changes
     ref.listen<AuthState>(authProvider, (prev, next) {
-      if (next.isLoggedIn && next.isVerified) {
-        // Navigate to main screen - replace with your home screen
-        Navigator.pushReplacementNamed(context, '/home');
-      } else if (next.isLoggedIn && !next.isVerified) {
-        
-      } else if (next.errorMessage.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMessage)),
-        );
-      }
-    });
+  if (next.isLoggedIn && next.isVerified) {
+    // Navigate to visits screen instead of home
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const DriverVisitsScreen()),
+    );
+  } else if (next.isLoggedIn && !next.isVerified) {
+    // Handle unverified case if needed
+  } else if (next.errorMessage.isNotEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(next.errorMessage)),
+    );
+  }
+});
 
     return Scaffold(
       backgroundColor: Colors.white,

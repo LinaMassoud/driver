@@ -15,6 +15,9 @@ class AuthState {
   final String? token;
   final String? refreshToken;
   final int? userId;
+  final int? carId;
+  final String? driverUsername;
+  final String? carName;
 
   AuthState({
     required this.isLoading,
@@ -25,6 +28,9 @@ class AuthState {
     this.token,
     this.refreshToken,
     this.userId,
+    this.carId,
+    this.driverUsername,
+    this.carName,
   });
 
   factory AuthState.initial() {
@@ -37,6 +43,9 @@ class AuthState {
       token: null,
       refreshToken: null,
       userId: null,
+      carId: null,
+      driverUsername: null,
+      carName: null,
     );
   }
 
@@ -48,6 +57,9 @@ class AuthState {
     String? token,
     String? refreshToken,
     int? userId,
+    int? carId,
+    String? driverUsername,
+    String? carName,
     bool? isVerified = true,
   }) {
     return AuthState(
@@ -58,6 +70,9 @@ class AuthState {
       token: token ?? this.token,
       refreshToken: refreshToken ?? this.refreshToken,
       userId: userId ?? this.userId,
+      carId: carId ?? this.carId,
+      driverUsername: driverUsername ?? this.driverUsername,
+      carName: carName ?? this.carName,
       isVerified: isVerified ?? this.isVerified,
     );
   }
@@ -88,48 +103,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     print("result = $result");
 
     if (result != null) {
-      // Check if the response contains an error message
-      if (result['error'] != null) {
-        String errorMessage = result['error'];
-
-        // Check if the error message contains 'not verified'
-        if (errorMessage.contains('not verified')) {
-          final userId = result['user_id'];
-          _setUserId(userId);
-
-          state = state.copyWith(
-            isLoading: false,
-            isLoggedIn: true,
-            isSignedUp: false,
-            isVerified: false,
-            errorMessage: errorMessage, // Set the exact error message here
-          );
-          // Note: Remove provider invalidation for now as they're not available yet
-          // ref.invalidate(userNameProvider);
-        } else {
-          // For other errors, simply show the error message
-          state = state.copyWith(
-            isLoading: false,
-            errorMessage: errorMessage,
-          );
-        }
+      // Check if the response contains an error message (from 404 or other error status)
+      if (result['message'] != null) {
+        String errorMessage = result['message'];
+        
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: errorMessage,
+        );
       }
-      // Check for a successful login
-      else if (result['token'] != null &&
-          result['refresh_token'] != null &&
-          result['user_id'] != null) {
+      // Check if the response contains a generic error field
+      else if (result['error'] != null) {
+        String errorMessage = result['error'];
+        
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: errorMessage,
+        );
+      }
+      // Check for a successful login based on your API response structure
+      else if (result['token'] != null && 
+               result['refresh_token'] != null && 
+               result['car_id'] != null) {
         final token = result['token'];
         final refreshToken = result['refresh_token'];
-        final userId = result['user_id'];
+        final carId = result['car_id'];
+        final driverUsername = result['driver_username'];
+        final carName = result['car_name'];
 
-        _setUserId(userId);
-        // Note: Remove provider invalidation for now as they're not available yet
-        // ref.invalidate(userNameProvider);
-        // ref.invalidate(contractsProvider);
-
-        // Optionally store token and refreshToken in secure storage
-        // await _secureStorage.write(key: 'token', value: token);
-        // await _secureStorage.write(key: 'refresh_token', value: refreshToken);
+        // Set car_id as user ID for compatibility
+        _setUserId(carId);
 
         state = state.copyWith(
           isLoading: false,
@@ -137,7 +140,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isSignedUp: false,
           token: token,
           refreshToken: refreshToken,
-          userId: userId,
+          userId: carId, // Using car_id as userId
+          carId: carId,
+          driverUsername: driverUsername,
+          carName: carName,
           isVerified: true, // User is verified after login success
         );
       }
@@ -173,18 +179,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final token = await _storage.read(key: 'token');
       final refreshToken = await _storage.read(key: 'refresh_token');
-      final userIdStr = await _storage.read(key: 'user_id');
+      final carIdStr = await _storage.read(key: 'car_id');
+      final driverUsername = await _storage.read(key: 'driver_username');
+      final carName = await _storage.read(key: 'car_name');
 
-      if (token != null && refreshToken != null && userIdStr != null) {
-        final userId = int.tryParse(userIdStr);
-        if (userId != null) {
-          _setUserId(userId);
+      if (token != null && refreshToken != null && carIdStr != null) {
+        final carId = int.tryParse(carIdStr);
+        if (carId != null) {
+          _setUserId(carId);
           state = state.copyWith(
             isLoggedIn: true,
             isVerified: true,
             token: token,
             refreshToken: refreshToken,
-            userId: userId,
+            userId: carId,
+            carId: carId,
+            driverUsername: driverUsername,
+            carName: carName,
           );
         }
       }
