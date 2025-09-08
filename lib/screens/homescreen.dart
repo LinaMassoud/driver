@@ -1,4 +1,5 @@
 import 'package:driver/l10n/app_localizations.dart';
+import 'package:driver/providers/auth_provider.dart';
 import 'package:driver/providers/driver_info_provider.dart';
 import 'package:driver/providers/language_provider.dart';
 import 'package:driver/providers/selected_date_provider.dart';
@@ -70,7 +71,7 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xfff5f8fe),
-      drawer: _buildDrawer(context, loc),
+      drawer: _buildDrawer(context, loc, ref),
       body: SafeArea(
         child: Column(
           children: [
@@ -238,7 +239,7 @@ class HomePage extends ConsumerWidget {
               label: loc.tomorrow, // 🔹 localized "Tomorrow"
               day: DateFormat("dd", locale.languageCode).format(tomorrow),
               date: dateFormatter.format(tomorrow),
-              onTap: () => showShiftPopup(context, today, ref),
+              onTap: () => showShiftPopup(context, tomorrow, ref),
             ),
             const SizedBox(height: 20),
 
@@ -279,7 +280,11 @@ class HomePage extends ConsumerWidget {
   }
 
   // 🔹 Drawer Widget
-  Drawer _buildDrawer(BuildContext context, AppLocalizations loc) {
+  Drawer _buildDrawer(
+    BuildContext context,
+    AppLocalizations loc,
+    WidgetRef ref,
+  ) {
     return Drawer(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
@@ -331,7 +336,16 @@ class HomePage extends ConsumerWidget {
               Navigator.pushNamed(context, '/language');
             },
           ),
-          _drawerItem(context, loc.logout, "assets/icons/logout.svg"),
+          _drawerItem(
+            context,
+            loc.logout,
+            "assets/icons/logout.svg",
+            onTap: () {
+              Navigator.pushNamed(context, '/login');
+
+              ref.read(authProvider.notifier).logout(ref);
+            },
+          ),
           const Spacer(),
           _drawerItem(
             context,
