@@ -530,14 +530,12 @@ class HomePage extends ConsumerWidget {
                               shiftIcons[shift]!,
                               width: 24,
                               height: 24,
-                              color: isSelected
-                                  ? const Color(0xFF05ABD7)
-                                  : Colors.grey,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               shift,
-                              style: const TextStyle(
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -545,22 +543,44 @@ class HomePage extends ConsumerWidget {
                         ),
                         // Custom radio button
                         Container(
-                          width: 24,
-                          height: 24,
+                          width: 20,
+                          height: 20,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isSelected
-                                ? const Color(0xFF05ABD7)
-                                : Colors.grey.shade300,
-                            border: Border.all(color: Colors.white, width: 2),
+                            color: Colors.white,
+                            border: Border.all(
+                              color: Colors.grey.shade400,
+                              width: .5,
+                            ),
                           ),
-                          child: isSelected
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 14,
-                                )
-                              : null,
+                          child: Center(
+                            child: isSelected
+                                ? Container(
+                                    width: 18, // smaller inner circle
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF05ABD7),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                        width: .5,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 10,
+                                    ),
+                                  )
+                                : Container(
+                                    width: 14, // smaller gray inner circle
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade300,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                          ),
                         ),
                       ],
                     ),
