@@ -2,6 +2,7 @@ import 'package:driver/l10n/app_localizations.dart';
 import 'package:driver/providers/language_provider.dart';
 import 'package:driver/screens/homescreen.dart';
 import 'package:driver/screens/languages.dart';
+import 'package:driver/screens/launch_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:driver/screens/login_screen.dart';
 import 'package:driver/screens/visits_screen.dart';
@@ -32,7 +33,7 @@ class MyApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const HomePage(),
+      home: const LaunchScreen(),
       routes: {
         // '/login' key routes to LoginScreen widget
         '/login': (context) => const LoginScreen(),

@@ -38,32 +38,55 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
         child: Column(
           children: [
             // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF05ABD7),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+            Directionality(
+              textDirection: selectedLanguage == 'ar'
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  Text(
-                    loc.languageTitle,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF05ABD7),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Title always centered
+                    Text(
+                      loc.languageTitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+
+                    // Back button
+                    Align(
+                      alignment:
+                          Alignment.centerLeft, // respects Directionality now
+                      child: IconButton(
+                        icon: Transform.rotate(
+                          angle: selectedLanguage == 'ar'
+                              ? 3.14159
+                              : 0, // rotate arrow for RTL
+                          child: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -72,55 +95,72 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
             // Language list
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 0),
+                padding: const EdgeInsets.only(top: 40), // push tiles down
                 itemCount: languages.length,
                 itemBuilder: (context, index) {
                   final lang = languages[index];
                   final isSelected = tempSelectedLanguage == lang['local'];
 
+                  // Determine if app language is RTL
+                  final isRtl = selectedLanguage == 'ar';
+
                   return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          tempSelectedLanguage = lang['local'];
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF80D9F2)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            tempSelectedLanguage = lang['local'];
+                          });
+                        },
+                        child: Container(
+                          width:
+                              MediaQuery.of(context).size.width * 0.85, // wider
+                          height: 60, // smaller height
+                          decoration: BoxDecoration(
                             color: isSelected
-                                ? const Color(0xFF05ABD7)
-                                : Colors.grey.shade300,
-                            width: 2,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Image.asset(lang['icon']!, width: 30, height: 30),
-                            const SizedBox(width: 12),
-                            Text(
-                              lang['name']!,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: isSelected
-                                    ? Colors.black
-                                    : Colors.grey.shade800,
-                              ),
+                                ? const Color(0xFF80D9F2)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF05ABD7)
+                                  : Colors.grey.shade300,
+                              width: 2,
                             ),
-                          ],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Text always centered
+                              Text(
+                                lang['name']!,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.black
+                                      : Colors.grey.shade800,
+                                ),
+                              ),
+                              // Icon aligned left or right based on language
+                              Align(
+                                alignment: isRtl
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Image.asset(
+                                    lang['icon']!,
+                                    width: 30,
+                                    height: 30,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -128,8 +168,6 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                 },
               ),
             ),
-
-            // Bottom container with save button
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
