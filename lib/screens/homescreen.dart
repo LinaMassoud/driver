@@ -96,8 +96,8 @@ class HomePage extends ConsumerWidget {
                   padding: const EdgeInsets.only(
                     top: 80,
                     bottom: 16,
-                    left: 16,
-                    right: 16,
+                    left: 30,
+                    right: 30,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -318,6 +318,9 @@ class HomePage extends ConsumerWidget {
             context,
             loc.appPermission,
             "assets/icons/permission.svg",
+            onTap: () {
+              Navigator.pushNamed(context, '/permissions');
+            },
           ),
           _drawerItem(
             context,
