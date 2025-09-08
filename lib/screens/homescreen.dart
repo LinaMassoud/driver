@@ -1,6 +1,7 @@
 import 'package:driver/l10n/app_localizations.dart';
 import 'package:driver/providers/driver_info_provider.dart';
 import 'package:driver/providers/language_provider.dart';
+import 'package:driver/screens/visits_screen.dart';
 import 'package:driver/services/api_service.dart';
 import 'package:driver/widgets/date_card.dart';
 import 'package:driver/widgets/day_item.dart';
@@ -624,7 +625,20 @@ class HomePage extends ConsumerWidget {
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            // TODO: Handle Go action with selectedDate & selectedShift
+                            // Use parent context after the pop
+                            Future.microtask(() {
+                              // Pass the selectedDate to the screen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DriverVisitsScreen(
+                                    selectedDate: DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(date!),
+                                  ),
+                                ),
+                              );
+                            });
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF05ABD7),
