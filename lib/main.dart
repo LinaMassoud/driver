@@ -38,6 +38,7 @@ class MyApp extends ConsumerWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomePage(),
         '/language': (context) => const LanguagePage(),
+        '/visits': (context) => const DriverVisitsScreen(),
         // '/profile' key routes to UserProfileScreen widget
       },
     );
