@@ -1,3 +1,4 @@
+import 'package:driver/screens/homescreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -35,11 +36,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!_usernameEmpty && !_passwordEmpty) {
       print("Inside _handleLogin");
-      ref.read(authProvider.notifier).login(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text.trim(),
-        ref: ref,
-      );
+      ref
+          .read(authProvider.notifier)
+          .login(
+            username: _usernameController.text.trim(),
+            password: _passwordController.text.trim(),
+            ref: ref,
+          );
     }
   }
 
@@ -49,20 +52,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Listen to auth state changes
     ref.listen<AuthState>(authProvider, (prev, next) {
-  if (next.isLoggedIn && next.isVerified) {
-    // Navigate to visits screen instead of home
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const DriverVisitsScreen()),
-    );
-  } else if (next.isLoggedIn && !next.isVerified) {
-    // Handle unverified case if needed
-  } else if (next.errorMessage.isNotEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(next.errorMessage)),
-    );
-  }
-});
+      if (next.isLoggedIn && next.isVerified) {
+        // Navigate to visits screen instead of home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      } else if (next.isLoggedIn && !next.isVerified) {
+        // Handle unverified case if needed
+      } else if (next.errorMessage.isNotEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next.errorMessage)));
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -96,23 +99,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
-              
+
               // Logo Section
               Center(
                 child: Container(
                   width: 120,
                   height: 120,
                   child: SvgPicture.asset(
-                  'assets/images/logo.svg',
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.contain,
-                ),
+                    'assets/images/logo.svg',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-              
+
               const SizedBox(height: 60),
-              
+
               // Username Field
               TextField(
                 controller: _usernameController,
@@ -156,17 +159,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 1,
-                    ),
+                    borderSide: const BorderSide(color: Colors.red, width: 1),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 2,
-                    ),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
                   ),
                   labelStyle: TextStyle(
                     color: Colors.grey.shade600,
@@ -177,7 +174,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     color: Color(0xFFD8DBDB),
                     fontSize: 16,
                     fontWeight: FontWeight.w300,
-                    fontFamily: 'poppins'
+                    fontFamily: 'poppins',
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -188,9 +185,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : null,
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Password Field
               TextField(
                 controller: _passwordController,
@@ -256,17 +253,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 1,
-                    ),
+                    borderSide: const BorderSide(color: Colors.red, width: 1),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 2,
-                    ),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
                   ),
                   labelStyle: TextStyle(
                     color: Colors.grey.shade600,
@@ -277,7 +268,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     color: Color(0xFFD8DBDB),
                     fontSize: 16,
                     fontWeight: FontWeight.w300,
-                    fontFamily: 'poppins'
+                    fontFamily: 'poppins',
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -288,9 +279,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : null,
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Login Button
               SizedBox(
                 width: double.infinity,
@@ -323,7 +314,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 40),
             ],
           ),

@@ -156,7 +156,12 @@ class _PermissionStepsScreenState extends State<PermissionStepsScreen> {
 
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Icon(Icons.arrow_back, color: Colors.white),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context); // 👈 go back to previous screen
+                      },
+                      child: const Icon(Icons.arrow_back, color: Colors.white),
+                    ),
                   ),
                 ],
               ),
