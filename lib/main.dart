@@ -3,6 +3,7 @@ import 'package:driver/providers/language_provider.dart';
 import 'package:driver/screens/homescreen.dart';
 import 'package:driver/screens/languages.dart';
 import 'package:driver/screens/launch_screen.dart';
+import 'package:driver/screens/permissions.dart';
 import 'package:flutter/material.dart';
 import 'package:driver/screens/login_screen.dart';
 import 'package:driver/screens/visits_screen.dart';
@@ -40,6 +41,7 @@ class MyApp extends ConsumerWidget {
         '/home': (context) => const HomePage(),
         '/language': (context) => const LanguagePage(),
         '/visits': (context) => const DriverVisitsScreen(),
+        '/permissions': (context) => const PermissionStepsScreen(),
         // '/profile' key routes to UserProfileScreen widget
       },
     );

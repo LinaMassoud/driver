@@ -18,7 +18,7 @@ class DayItem extends StatelessWidget {
       children: [
         Text(
           day,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         Container(
@@ -30,6 +30,7 @@ class DayItem extends StatelessWidget {
           child: Text(
             date,
             style: TextStyle(
+              fontSize: 12,
               color: selected ? Colors.white : Color(0xFF9EA5A6),
               fontWeight: FontWeight.w500,
             ),
