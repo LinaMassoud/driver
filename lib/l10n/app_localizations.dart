@@ -192,6 +192,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to fetch shifts'**
   String get failedToFetchShifts;
+
+  /// No description provided for @visits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get visits;
+
+  /// No description provided for @orderType.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Type'**
+  String get orderType;
+
+  /// No description provided for @shiftType.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift Type'**
+  String get shiftType;
+
+  /// No description provided for @chooseVisitStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose visit status'**
+  String get chooseVisitStatus;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @phoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get phoneNumber;
+
+  /// No description provided for @showVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Visits'**
+  String get showVisits;
+
+  /// No description provided for @fetchingVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'fetching visits...'**
+  String get fetchingVisits;
+
+  /// No description provided for @numberOfEmployeesByNationality.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of employees by nationality'**
+  String get numberOfEmployeesByNationality;
+
+  /// No description provided for @noDataAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No data available'**
+  String get noDataAvailable;
+
+  /// No description provided for @totalNumberOfVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Total number of visits'**
+  String get totalNumberOfVisits;
+
+  /// No description provided for @noVisitsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No visits found for the selected criteria'**
+  String get noVisitsFound;
+
+  /// No description provided for @address.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get address;
+
+  /// No description provided for @call.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get call;
+
+  /// No description provided for @arrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrive'**
+  String get arrive;
+
+  /// No description provided for @arrived.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived'**
+  String get arrived;
+
+  /// No description provided for @orderTypesNotLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Order types not loaded yet. Please wait...'**
+  String get orderTypesNotLoaded;
+
+  /// No description provided for @shiftTypesNotLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift types not loaded yet. Please wait...'**
+  String get shiftTypesNotLoaded;
+
+  /// No description provided for @visitStatusesNotLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit statuses not loaded yet. Please wait...'**
+  String get visitStatusesNotLoaded;
+
+  /// No description provided for @pleaseSelectStatusOrNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a visit status or enter notes'**
+  String get pleaseSelectStatusOrNotes;
+
+  /// No description provided for @visitDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit Details'**
+  String get visitDetails;
+
+  /// No description provided for @from.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get from;
+
+  /// No description provided for @to.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get to;
+
+  /// No description provided for @contractNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract number'**
+  String get contractNumber;
+
+  /// No description provided for @customerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Name'**
+  String get customerName;
+
+  /// No description provided for @residencyNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Residency number'**
+  String get residencyNumber;
+
+  /// No description provided for @statusType.
+  ///
+  /// In en, this message translates to:
+  /// **'Status type'**
+  String get statusType;
+
+  /// No description provided for @laborName.
+  ///
+  /// In en, this message translates to:
+  /// **'Labor name'**
+  String get laborName;
+
+  /// No description provided for @serviceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Service name'**
+  String get serviceName;
+
+  /// No description provided for @nationality.
+  ///
+  /// In en, this message translates to:
+  /// **'Nationality'**
+  String get nationality;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loading;
+
+  /// No description provided for @pleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait'**
+  String get pleaseWait;
+
+  /// No description provided for @houseType.
+  ///
+  /// In en, this message translates to:
+  /// **'House Type'**
+  String get houseType;
+
+  /// No description provided for @buildingNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Building Number'**
+  String get buildingNumber;
+
+  /// No description provided for @floorNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor Number'**
+  String get floorNumber;
+
+  /// No description provided for @apartmentNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Apartment Number'**
+  String get apartmentNumber;
+
+  /// No description provided for @notes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get notes;
+
+  /// No description provided for @failedToLoadAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load address details'**
+  String get failedToLoadAddress;
+
+  /// No description provided for @updateLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Location'**
+  String get updateLocation;
+
+  /// No description provided for @update.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get update;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
