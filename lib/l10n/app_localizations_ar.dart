@@ -43,4 +43,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteAccount => 'حذف الحساب';
+
+  @override
+  String get chooseShiftType => 'اختر نوع الشيفت';
+
+  @override
+  String get go => 'اذهب';
+
+  @override
+  String get back => 'عودة';
+
+  @override
+  String get failedToFetchShifts => 'فشل في جلب الشيفتات';
 }

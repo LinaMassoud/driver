@@ -1,6 +1,7 @@
 import 'package:driver/l10n/app_localizations.dart';
 import 'package:driver/providers/driver_info_provider.dart';
 import 'package:driver/providers/language_provider.dart';
+import 'package:driver/services/api_service.dart';
 import 'package:driver/widgets/date_card.dart';
 import 'package:driver/widgets/day_item.dart';
 import 'package:flutter/material.dart';
@@ -209,7 +210,8 @@ class HomePage extends ConsumerWidget {
               margin: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 loc.chooseDay, // localized label
-                textAlign: locale.languageCode == 'ar'
+                textAlign:
+                    locale.languageCode == 'ar' || locale.languageCode == 'ur'
                     ? TextAlign.right
                     : TextAlign.left,
                 style: const TextStyle(
@@ -371,15 +373,16 @@ class HomePage extends ConsumerWidget {
   }
 
   Future<void> showCustomCalendarPopup(
-    BuildContext context,
+    BuildContext parentContext, // use parent context
     WidgetRef ref,
   ) async {
     final locale = ref.watch(languageProvider);
     DateTime? selectedDate;
 
     await showDialog(
-      context: context,
-      builder: (context) {
+      context: parentContext, // use parent context to show the dialog
+      builder: (dialogContext) {
+        // dialogContext is only for this dialog
         final today = DateTime.now();
         final daysToShow = List.generate(
           30,
@@ -390,7 +393,7 @@ class HomePage extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          contentPadding: const EdgeInsets.all(0),
+          contentPadding: EdgeInsets.zero,
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -430,8 +433,12 @@ class HomePage extends ConsumerWidget {
                       return GestureDetector(
                         onTap: () {
                           selectedDate = day;
-                          Navigator.pop(context);
-                          showShiftPopup(context, selectedDate!);
+                          Navigator.pop(dialogContext); // close the dialog
+
+                          // Use parentContext after the pop, safely
+                          Future.microtask(() {
+                            showShiftPopup(parentContext, selectedDate!);
+                          });
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -456,9 +463,10 @@ class HomePage extends ConsumerWidget {
                                 ),
                               ),
                               Text(
-                                DateFormat('E', locale.languageCode)
-                                    .format(day)
-                                    .substring(0, 1), // or use initials map
+                                DateFormat(
+                                  'E',
+                                  locale.languageCode,
+                                ).format(day).substring(0, 1),
                                 style: const TextStyle(fontSize: 10),
                               ),
                             ],
@@ -477,154 +485,182 @@ class HomePage extends ConsumerWidget {
   }
 
   Future<void> showShiftPopup(BuildContext context, DateTime date) async {
-    String selectedShift = "Morning";
+    String selectedShift = "";
 
-    // Map each shift to its corresponding SVG
+    // Map each shift ID to its corresponding SVG
     final shiftIcons = {
-      "Morning": "assets/icons/1.svg",
-      "Evening": "assets/icons/2.svg",
-      "Full Day": "assets/icons/3.svg",
+      1: "assets/icons/1.svg",
+      2: "assets/icons/2.svg",
+      3: "assets/icons/3.svg",
     };
+
+    // Fetch the shifts from API
+    List<Map<String, dynamic>>? shifts = [];
+    try {
+      shifts =
+          await ApiService.getDriverShifts(); // Make sure this returns List<Map<String, dynamic>>
+      if (shifts!.isNotEmpty) {
+        selectedShift = shifts[0]['service_shifts']; // default selection
+      }
+    } catch (e) {
+      print("Failed to fetch shifts: $e");
+      return;
+    }
 
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          contentPadding: const EdgeInsets.all(16),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Choose Shift Type",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        final loc = AppLocalizations.of(context)!;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 16),
-              ...["Morning", "Evening", "Full Day"].map((shift) {
-                final isSelected = selectedShift == shift;
-                return GestureDetector(
-                  onTap: () => selectedShift = shift,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF80D9F2)
-                          : Colors.white,
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF05ABD7)
-                            : Colors.grey.shade300,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
+              contentPadding: const EdgeInsets.all(16),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    loc.chooseShiftType,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const SizedBox(height: 16),
+                  ...shifts!.map((shift) {
+                    final isSelected = selectedShift == shift['service_shifts'];
+                    final shiftId = shift['id'] as int;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        selectedShift = shift['service_shifts'];
+                      }),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF80D9F2)
+                              : Colors.white,
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF05ABD7)
+                                : Colors.grey.shade300,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            SvgPicture.asset(
-                              shiftIcons[shift]!,
-                              width: 24,
-                              height: 24,
+                            Row(
+                              children: [
+                                SvgPicture.asset(
+                                  shiftIcons[shiftId]!,
+                                  width: 24,
+                                  height: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  shift['service_shifts'],
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              shift,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
+                            // Custom radio button
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: Colors.grey.shade400,
+                                  width: .5,
+                                ),
+                              ),
+                              child: Center(
+                                child: isSelected
+                                    ? Container(
+                                        width: 18,
+                                        height: 18,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF05ABD7),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.grey.shade300,
+                                            width: .5,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: 10,
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 14,
+                                        height: 14,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade300,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
                               ),
                             ),
                           ],
                         ),
-                        // Custom radio button
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            border: Border.all(
-                              color: Colors.grey.shade400,
-                              width: .5,
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            // TODO: Handle Go action with selectedDate & selectedShift
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF05ABD7),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
                             ),
                           ),
-                          child: Center(
-                            child: isSelected
-                                ? Container(
-                                    width: 18,
-                                    height: 18,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF05ABD7),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                        width: .5,
-                                      ),
-                                    ),
-                                    child: const Icon(
-                                      Icons.check,
-                                      color: Colors.white,
-                                      size: 10,
-                                    ),
-                                  )
-                                : Container(
-                                    width: 14,
-                                    height: 14,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade300,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
+                          child: Text(
+                            loc.go,
+                            style: TextStyle(color: Colors.white),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-              const SizedBox(height: 16),
-              // Buttons stacked vertically
-              Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // TODO: Handle Go action with selectedDate & selectedShift
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF05ABD7),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFBCC0C5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: Text(
+                            loc.back,
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ),
                       ),
-                      child: const Text("Go"),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                      ),
-                      child: const Text("Back"),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

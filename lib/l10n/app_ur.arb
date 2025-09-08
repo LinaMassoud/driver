@@ -11,5 +11,10 @@
   "appPermission": "ایپ کی اجازتیں",
   "language": "زبان",
   "logout": "لاگ آؤٹ",
-  "deleteAccount": "اکاؤنٹ حذف کریں"
+  "deleteAccount": "اکاؤنٹ حذف کریں",
+
+   "chooseShiftType": "شفٹ کی قسم منتخب کریں",
+  "go": "چلو",
+  "back": "پیچھے",
+  "failedToFetchShifts": "شفٹ حاصل کرنے میں ناکامی"
 }

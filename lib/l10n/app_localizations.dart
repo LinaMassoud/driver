@@ -168,6 +168,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete Account'**
   String get deleteAccount;
+
+  /// No description provided for @chooseShiftType.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Shift Type'**
+  String get chooseShiftType;
+
+  /// No description provided for @go.
+  ///
+  /// In en, this message translates to:
+  /// **'Go'**
+  String get go;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @failedToFetchShifts.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to fetch shifts'**
+  String get failedToFetchShifts;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

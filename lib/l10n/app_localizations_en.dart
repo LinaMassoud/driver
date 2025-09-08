@@ -43,4 +43,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteAccount => 'Delete Account';
+
+  @override
+  String get chooseShiftType => 'Choose Shift Type';
+
+  @override
+  String get go => 'Go';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get failedToFetchShifts => 'Failed to fetch shifts';
 }

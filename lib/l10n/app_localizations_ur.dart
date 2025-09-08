@@ -43,4 +43,16 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get deleteAccount => 'اکاؤنٹ حذف کریں';
+
+  @override
+  String get chooseShiftType => 'شفٹ کی قسم منتخب کریں';
+
+  @override
+  String get go => 'چلو';
+
+  @override
+  String get back => 'پیچھے';
+
+  @override
+  String get failedToFetchShifts => 'شفٹ حاصل کرنے میں ناکامی';
 }
