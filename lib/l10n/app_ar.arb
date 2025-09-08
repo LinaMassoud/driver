@@ -1,4 +1,15 @@
 {
   "@@locale": "ar",
-  "home": "الرئيسية"
+  "home": "الرئيسية",
+  "chooseDay": "اختر اليوم",
+  "today": "اليوم",
+  "tomorrow": "غدًا",
+  "customDate": "تاريخ مخصص",
+  "languageTitle": "اللغة",
+  "save": "حفظ",
+  "languageSaved": "تم حفظ اللغة",
+  "appPermission": "صلاحيات التطبيق",
+  "language": "اللغة",
+  "logout": "تسجيل الخروج",
+  "deleteAccount": "حذف الحساب"
 }

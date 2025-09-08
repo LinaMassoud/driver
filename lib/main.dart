@@ -1,4 +1,5 @@
 import 'package:driver/l10n/app_localizations.dart';
+import 'package:driver/providers/language_provider.dart';
 import 'package:driver/screens/homescreen.dart';
 import 'package:driver/screens/languages.dart';
 import 'package:flutter/material.dart';
@@ -11,24 +12,26 @@ void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(languageProvider);
     return MaterialApp(
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('ar'), Locale('ur', 'PK')],
       localizationsDelegates: const [
         AppLocalizations.delegate, // Generated delegate
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: AppLocalizations.supportedLocales,
       home: const HomePage(),
       routes: {
         // '/login' key routes to LoginScreen widget
