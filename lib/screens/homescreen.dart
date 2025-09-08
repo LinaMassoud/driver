@@ -556,7 +556,7 @@ class HomePage extends ConsumerWidget {
                           child: Center(
                             child: isSelected
                                 ? Container(
-                                    width: 18, // smaller inner circle
+                                    width: 18,
                                     height: 18,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF05ABD7),
@@ -573,11 +573,12 @@ class HomePage extends ConsumerWidget {
                                     ),
                                   )
                                 : Container(
-                                    width: 14, // smaller gray inner circle
+                                    width: 14,
                                     height: 14,
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade300,
                                       shape: BoxShape.circle,
+                                      
                                     ),
                                   ),
                           ),
@@ -588,9 +589,11 @@ class HomePage extends ConsumerWidget {
                 );
               }).toList(),
               const SizedBox(height: 16),
-              Row(
+              // Buttons stacked vertically
+              Column(
                 children: [
-                  Expanded(
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
@@ -605,8 +608,9 @@ class HomePage extends ConsumerWidget {
                       child: const Text("Go"),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
