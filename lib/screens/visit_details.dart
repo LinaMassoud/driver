@@ -4,17 +4,20 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../models/visit_model.dart';
 import '../services/api_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:driver/l10n/app_localizations.dart';
+import 'package:driver/providers/language_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class VisitDetailsScreen extends StatefulWidget {
+class VisitDetailsScreen extends ConsumerStatefulWidget {
   final Visit visit;
 
   const VisitDetailsScreen({Key? key, required this.visit}) : super(key: key);
 
   @override
-  State<VisitDetailsScreen> createState() => _VisitDetailsScreenState();
+  ConsumerState<VisitDetailsScreen> createState() => _VisitDetailsScreenState();
 }
 
-class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
+class _VisitDetailsScreenState extends ConsumerState<VisitDetailsScreen> {
   
   late Map<String, dynamic> _visitData;
 
@@ -129,10 +132,11 @@ Future<void> _loadVisitStatuses() async {
   }
 
   void _showVisitStatusDialog(BuildContext context) {
+  final loc = AppLocalizations.of(context)!;
   if (_visitStatuses.isEmpty && !_isLoadingStatuses) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Visit statuses not loaded yet. Please try again.'),
+      SnackBar(
+        content: Text(loc.visitStatusesNotLoaded ?? 'Visit statuses not loaded yet. Please try again.'),
         backgroundColor: Colors.red,
       ),
     );
@@ -164,9 +168,9 @@ Future<void> _loadVisitStatuses() async {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Choose Visit Status',
-                        style: TextStyle(
+                      Text(
+                        loc.chooseVisitStatus,
+                        style: const TextStyle(
                           color: Color(0xFF05ABD7),
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
@@ -187,12 +191,12 @@ Future<void> _loadVisitStatuses() async {
                               children: [
                                 // "All" option
                                 _buildDialogOption(
-                                  'All', 
+                                  loc.all, 
                                   _selectedVisitStatus, 
                                   (value) {
                                     setState(() {
                                       _selectedVisitStatus = null;
-                                      _selectedVisitStatusId = null; // Add this line
+                                      _selectedVisitStatusId = null;
                                     });
                                     Navigator.of(context).pop();
                                   },
@@ -210,7 +214,7 @@ Future<void> _loadVisitStatuses() async {
                                       (value) {
                                         setState(() {
                                           _selectedVisitStatus = value;
-                                          _selectedVisitStatusId = status['id']; // Add this line
+                                          _selectedVisitStatusId = status['id'];
                                         });
                                         Navigator.of(context).pop();
                                       },
@@ -236,11 +240,12 @@ Future<void> _loadVisitStatuses() async {
 }
 
 Future<void> _handleUpdate() async {
+  final loc = AppLocalizations.of(context)!;
   // Validate that at least visit status or notes is provided
   if (_selectedVisitStatusId == null && _notesController.text.trim().isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please select a visit status or enter notes'),
+      SnackBar(
+        content: Text(loc.pleaseSelectStatusOrNotes ?? 'Please select a visit status or enter notes'),
         backgroundColor: Colors.red,
       ),
     );
@@ -344,10 +349,16 @@ Future<void> _handleUpdateLocation() async {
 
 // Add these helper methods for showing messages
 void _showErrorSnackBar(String message) {
+  final locale = ref.watch(languageProvider);
   if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+              ? TextAlign.right
+              : TextAlign.left,
+        ),
         backgroundColor: Colors.red,
       ),
     );
@@ -355,10 +366,16 @@ void _showErrorSnackBar(String message) {
 }
 
 void _showSuccessSnackBar(String message) {
+  final locale = ref.watch(languageProvider);
   if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+              ? TextAlign.right
+              : TextAlign.left,
+        ),
         backgroundColor: Colors.green,
       ),
     );
@@ -641,6 +658,8 @@ void _showSuccessSnackBar(String message) {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    final locale = ref.watch(languageProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
@@ -660,31 +679,34 @@ void _showSuccessSnackBar(String message) {
               children: [
                 // Arrow icon
                 Positioned(
-                left: 0,
+                left: locale.languageCode == 'ar' || locale.languageCode == 'ur' ? null : 0,
+                right: locale.languageCode == 'ar' || locale.languageCode == 'ur' ? 0 : null,
                 top: 0,
                 bottom: 0,
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.of(context).pop();
                   },
-                  child: const Icon(
-                    Icons.arrow_back_ios,
+                  child: Icon(
+                    locale.languageCode == 'ar' || locale.languageCode == 'ur' 
+                        ? Icons.arrow_back_ios 
+                        : Icons.arrow_back_ios,
                     color: Colors.white,
                     size: 20,
                   ),
                 ),
               ),
                 // Title
-                const Center(
-                  child: Text(
-                    'Visit Details',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 24,
-                    ),
+                Center(
+                child: Text(
+                  loc.visitDetails ?? 'Visit Details',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
                   ),
                 ),
+              ),
               ],
             ),
           ),
@@ -700,16 +722,16 @@ void _showSuccessSnackBar(String message) {
                   child: Row(
                     children: [
                       _buildTimeSlot(
-                        _visitData['timeFrom'],
-                        'From',
-                        const Color(0xFFFFA200),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildTimeSlot(
-                        _visitData['timeTo'],
-                        'TO',
-                        const Color(0xFFFFA200),
-                      ),
+                      _visitData['timeFrom'],
+                      loc.from ?? 'From',
+                      const Color(0xFFFFA200),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildTimeSlot(
+                      _visitData['timeTo'],
+                      loc.to ?? 'TO',
+                      const Color(0xFFFFA200),
+                    ),
                     ],
                   ),
                 ),
@@ -718,15 +740,15 @@ void _showSuccessSnackBar(String message) {
 
                 // Visit Details Card
                 _buildInfoCard(
-                  'Visit Details',
+                  loc.visitDetails ?? 'Visit Details',
                   [
-                    {'label': 'Contract number', 'value': _visitData['contractNumber']},
-                    {'label': 'Customer Name', 'value': _visitData['customerName']},
-                    {'label': 'Residency number', 'value': _visitData['residencyNumber']},
-                    {'label': 'Status type', 'value': _visitData['statusType']},
-                    {'label': 'Labor name', 'value': _visitData['laborName']},
-                    {'label': 'Service name', 'value': _visitData['serviceName']},
-                    {'label': 'Nationality', 'value': _visitData['nationality']},
+                    {'label': loc.contractNumber ?? 'Contract number', 'value': _visitData['contractNumber']},
+                    {'label': loc.customerName ?? 'Customer Name', 'value': _visitData['customerName']},
+                    {'label': loc.residencyNumber ?? 'Residency number', 'value': _visitData['residencyNumber']},
+                    {'label': loc.statusType ?? 'Status type', 'value': _visitData['statusType']},
+                    {'label': loc.laborName ?? 'Labor name', 'value': _visitData['laborName']},
+                    {'label': loc.serviceName ?? 'Service name', 'value': _visitData['serviceName']},
+                    {'label': loc.nationality ?? 'Nationality', 'value': _visitData['nationality']},
                   ],
                 ),
 
@@ -734,21 +756,21 @@ void _showSuccessSnackBar(String message) {
 
                 // Address Card
                 _buildInfoCard(
-                'Address',
-                [
-                  if (_isLoadingAddress)
-                    {'label': 'Loading...', 'value': 'Please wait'}
-                  else if (_addressDetails != null) ...[
-                    {'label': 'House Type', 'value': _addressDetails!['house_type'] ?? 'N/A'},
-                    {'label': 'Building Number', 'value': _addressDetails!['building_number'] ?? 'N/A'},
-                    {'label': 'Floor Number', 'value': _addressDetails!['floor_number']?.toString() ?? 'N/A'},
-                    {'label': 'Apartment Number', 'value': _addressDetails!['apartment_number'] ?? 'N/A'},
-                    {'label': 'Notes', 'value': _addressDetails!['card_text'] ?? 'N/A'},
-                  ]
-                  else
-                    {'label': 'Address', 'value': 'Failed to load address details'},
-                ],
-              ),
+                  loc.address ?? 'Address',
+                  [
+                    if (_isLoadingAddress)
+                      {'label': loc.loading ?? 'Loading...', 'value': loc.pleaseWait ?? 'Please wait'}
+                    else if (_addressDetails != null) ...[
+                      {'label': loc.houseType ?? 'House Type', 'value': _addressDetails!['house_type'] ?? 'N/A'},
+                      {'label': loc.buildingNumber ?? 'Building Number', 'value': _addressDetails!['building_number'] ?? 'N/A'},
+                      {'label': loc.floorNumber ?? 'Floor Number', 'value': _addressDetails!['floor_number']?.toString() ?? 'N/A'},
+                      {'label': loc.apartmentNumber ?? 'Apartment Number', 'value': _addressDetails!['apartment_number'] ?? 'N/A'},
+                      {'label': loc.notes ?? 'Notes', 'value': _addressDetails!['card_text'] ?? 'N/A'},
+                    ]
+                    else
+                      {'label': loc.address ?? 'Address', 'value': loc.failedToLoadAddress ?? 'Failed to load address details'},
+                  ],
+                ),
 
                 const SizedBox(height: 24),
 
@@ -776,9 +798,9 @@ void _showSuccessSnackBar(String message) {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text(
-                        'Update Location',
-                        style: TextStyle(
+                    : Text(
+                        loc.updateLocation ?? 'Update Location',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                         ),
@@ -790,10 +812,10 @@ void _showSuccessSnackBar(String message) {
 
                 // Choose Visit Status Dropdown
                 _buildDropdownField(
-                  label: 'Choose visit status',
-                  selectedValue: _selectedVisitStatus,
-                  onTap: () => _showVisitStatusDialog(context),
-                ),
+                label: loc.chooseVisitStatus ?? 'Choose visit status',
+                selectedValue: _selectedVisitStatus,
+                onTap: () => _showVisitStatusDialog(context),
+              ),
 
                 // Number Input Field
                 _buildInputField(
@@ -804,10 +826,10 @@ void _showSuccessSnackBar(String message) {
 
                 // Notes Input Field
                 _buildInputField(
-                  hintText: 'Notes',
-                  controller: _notesController,
-                  maxLines: 8,
-                ),
+                hintText: loc.notes ?? 'Notes',
+                controller: _notesController,
+                maxLines: 8,
+              ),
 
                 const SizedBox(height: 24),
 
@@ -835,9 +857,9 @@ void _showSuccessSnackBar(String message) {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text(
-                        'Update',
-                        style: TextStyle(
+                    : Text(
+                        loc.update ?? 'Update',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                         ),

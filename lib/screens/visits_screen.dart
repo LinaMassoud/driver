@@ -8,8 +8,13 @@ import 'package:intl/intl.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/visit_model.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:driver/l10n/app_localizations.dart';
+import 'package:driver/providers/language_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:driver/providers/selected_date_provider.dart';
 
-class DriverVisitsScreen extends StatefulWidget {
+
+class DriverVisitsScreen extends ConsumerStatefulWidget {
   final String? selectedDate;
   const DriverVisitsScreen({
     Key? key,
@@ -17,10 +22,10 @@ class DriverVisitsScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<DriverVisitsScreen> createState() => _DriverVisitsScreenState();
+  ConsumerState<DriverVisitsScreen> createState() => _DriverVisitsScreenState();
 }
 
-class _DriverVisitsScreenState extends State<DriverVisitsScreen> {
+class _DriverVisitsScreenState extends ConsumerState<DriverVisitsScreen> {
   Set<String> expandedVisits = {};
   bool _showVisits = false;
   bool _isLoading = false;
@@ -49,36 +54,68 @@ int _totalVisits = 0;
 String? _selectedShiftDescription;
 
   @override
-  void initState() {
-    super.initState();
-    _loadDropdownData();
-  }
+void initState() {
+  super.initState();
+  _loadDropdownData();
+  
+  // Get the selected shift from the provider
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final selectedDateShift = ref.read(selectedDateShiftProvider);
+    if (selectedDateShift.shift != null && selectedDateShift.shift!.isNotEmpty) {
+      // Find the shift in the loaded data and set it
+      _setShiftFromProvider(selectedDateShift.shift!);
+    }
+  });
+}
 
-  Future<void> _loadDropdownData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Load all dropdown data
-      final orderTypesResult = await ApiService.getOrderTypes();
-      final shiftsResult = await ApiService.getShifts();
-      final visitStatusesResult = await ApiService.getVisitStatuses();
-
+void _setShiftFromProvider(String shiftName) {
+  if (_shiftTypes.isNotEmpty) {
+    final matchingShift = _shiftTypes.firstWhere(
+      (shift) => shift['service_shifts'] == shiftName,
+      orElse: () => {},
+    );
+    
+    if (matchingShift.isNotEmpty) {
       setState(() {
-        _orderTypes = orderTypesResult ?? [];
-        _shiftTypes = shiftsResult ?? [];
-        _visitStatuses = visitStatusesResult ?? [];
-      });
-    } catch (e) {
-      print('Error loading dropdown data: $e');
-      _showErrorSnackBar('Failed to load data. Please try again.');
-    } finally {
-      setState(() {
-        _isLoading = false;
+        _selectedShiftType = shiftName;
+        _selectedShiftTypeId = matchingShift['id'];
+        _selectedShiftDescription = matchingShift['description'];
       });
     }
   }
+}
+
+  Future<void> _loadDropdownData() async {
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    // Load all dropdown data
+    final orderTypesResult = await ApiService.getOrderTypes();
+    final shiftsResult = await ApiService.getShifts();
+    final visitStatusesResult = await ApiService.getVisitStatuses();
+
+    setState(() {
+      _orderTypes = orderTypesResult ?? [];
+      _shiftTypes = shiftsResult ?? [];
+      _visitStatuses = visitStatusesResult ?? [];
+    });
+
+    // After loading shift types, check if there's a selected shift from provider
+    final selectedDateShift = ref.read(selectedDateShiftProvider);
+    if (selectedDateShift.shift != null && selectedDateShift.shift!.isNotEmpty) {
+      _setShiftFromProvider(selectedDateShift.shift!);
+    }
+  } catch (e) {
+    print('Error loading dropdown data: $e');
+    _showErrorSnackBar('Failed to load data. Please try again.');
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
 
   Future<void> _fetchVisits() async {
   if (_selectedShiftTypeId == null) {
@@ -186,9 +223,10 @@ Future<void> _makePhoneCall(String phoneNumber) async {
 // Add these methods to your _DriverVisitsScreenState class:
 
 void _showOrderTypeDialog(BuildContext context) {
+  final loc = AppLocalizations.of(context)!;
   if (_orderTypes.isEmpty) {
-    _showErrorSnackBar('Order types not loaded yet. Please wait...');
-    return;
+      _showErrorSnackBar(loc.orderTypesNotLoaded ?? 'Order types not loaded yet. Please wait...');
+      return;
   }
 
   showDialog(
@@ -213,9 +251,9 @@ void _showOrderTypeDialog(BuildContext context) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Order Type',
-                        style: TextStyle(
+                       Text(
+                        loc.orderType,
+                        style: const TextStyle(
                           color: Color(0xFF05ABD7),
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
@@ -256,10 +294,11 @@ void _showOrderTypeDialog(BuildContext context) {
 
 
 void _showShiftTypeDialog(BuildContext context) {
+  final loc = AppLocalizations.of(context)!;
   if (_shiftTypes.isEmpty) {
-    _showErrorSnackBar('Shift types not loaded yet. Please wait...');
-    return;
-  }
+      _showErrorSnackBar(loc.shiftTypesNotLoaded ?? 'Shift types not loaded yet. Please wait...');
+      return;
+    }
 
   showDialog(
     context: context,
@@ -283,14 +322,14 @@ void _showShiftTypeDialog(BuildContext context) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Shift Type',
-                        style: TextStyle(
-                          color: Color(0xFF05ABD7),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Text(
+                      loc.shiftType,
+                      style: const TextStyle(
+                        color: Color(0xFF05ABD7),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
                       const SizedBox(height: 24),
                       
                       // Dynamic shift type options from API
@@ -326,10 +365,11 @@ void _showShiftTypeDialog(BuildContext context) {
 }
 
 void _showVisitStatusDialog(BuildContext context) {
+  final loc = AppLocalizations.of(context)!;
   if (_visitStatuses.isEmpty) {
-    _showErrorSnackBar('Visit statuses not loaded yet. Please wait...');
-    return;
-  }
+      _showErrorSnackBar(loc.visitStatusesNotLoaded ?? 'Visit statuses not loaded yet. Please wait...');
+      return;
+    }
 
   showDialog(
     context: context,
@@ -356,9 +396,9 @@ void _showVisitStatusDialog(BuildContext context) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Choose Visit Status',
-                        style: TextStyle(
+                      Text(
+                        loc.chooseVisitStatus,
+                        style: const TextStyle(
                           color: Color(0xFF05ABD7),
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
@@ -372,7 +412,7 @@ void _showVisitStatusDialog(BuildContext context) {
                             children: [
                               // "All" option
                               _buildDialogOption(
-                                'All',
+                                loc.all,
                                 _selectedVisitStatus,
                                 (value) {
                                   setState(() {
@@ -443,10 +483,16 @@ Future<void> _openDefaultMaps(double latitude, double longitude, String address)
 }
 
 void _showErrorSnackBar(String message) {
+  final locale = ref.watch(languageProvider);
   if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+            message,
+            textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                ? TextAlign.right
+                : TextAlign.left,
+          ),
         backgroundColor: Colors.red,
       ),
     );
@@ -526,10 +572,16 @@ Future<void> _handleArriveAction(Map<String, dynamic> visit) async {
 
 // Add this helper method for success messages
 void _showSuccessSnackBar(String message) {
+  final locale = ref.watch(languageProvider);
   if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+            message,
+            textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                ? TextAlign.right
+                : TextAlign.left,
+          ),
         backgroundColor: Colors.green,
       ),
     );
@@ -601,6 +653,8 @@ Container(
   );
 }
   Widget _buildVisitCard(Map<String, dynamic> visit) {
+  final loc = AppLocalizations.of(context)!;
+  final locale = ref.watch(languageProvider);
   final visitId = visit['SERVICE_CONTRACT_ID'].toString();
   final isExpanded = expandedVisits.contains(visitId);
 
@@ -667,39 +721,47 @@ Container(
                             decoration: BoxDecoration(
                               color: Color(0xFF05ABD7),
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(11),
-                                topRight: Radius.zero,
+                                topLeft: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                                    ? Radius.zero
+                                    : Radius.circular(11),
+                                topRight: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                                    ? Radius.circular(11)
+                                    : Radius.zero,
                                 bottomLeft: isExpanded ? Radius.zero : Radius.zero,
                                 bottomRight: Radius.zero,
                               ),
                             ),
                             padding: const EdgeInsets.all(16),
                             child: Center(
-                              child: AnimatedRotation(
-                                turns: isExpanded ? 0.25 : 0,
-                                duration: const Duration(milliseconds: 300),
-                                child: const Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
+                          child: AnimatedRotation(
+                            turns: isExpanded ? 0.5 : 0, // Changed from 0.25 to 0.5 for 180-degree rotation
+                            duration: const Duration(milliseconds: 300),
+                            child: Icon(
+                              Icons.keyboard_arrow_down, // Changed to use down arrow that rotates
+                              color: Colors.white,
+                              size: 25,
                             ),
+                          ),
+                        ),
                           ),
                         ),
                         
                         // White background section for visit info
                         Expanded(
                           child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.zero,
-                                topRight: Radius.circular(11),
-                                bottomLeft: Radius.zero,
-                                bottomRight: Radius.zero,
-                              ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                                  ? Radius.circular(11)
+                                  : Radius.zero,
+                              topRight: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                                  ? Radius.zero
+                                  : Radius.circular(11),
+                              bottomLeft: Radius.zero,
+                              bottomRight: Radius.zero,
                             ),
+                          ),
                             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -866,11 +928,11 @@ Container(
           
           // Action buttons - Now integrated into the card
           Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () async {
-                  // Fetch address details to get actual coordinates
+          children: [
+            // Address button
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
                   final addressDetails = await ApiService.getCustomerAddressDetails(visit['ADDRESS_ID'] ?? 0);
                   
                   if (addressDetails != null) {
@@ -880,7 +942,6 @@ Container(
                     
                     _openDefaultMaps(latitude, longitude, address);
                   } else {
-                    // Fallback to default coordinates
                     _openDefaultMaps(
                       24.7136,
                       46.6753,
@@ -888,64 +949,22 @@ Container(
                     );
                   }
                 },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFC107),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(11),
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Address',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    _showPhoneDialog(context, visit['PHONE_NUMBER'] ?? '0000000000');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFA200),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Call',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-              child: GestureDetector(
-                onTap: _canArrive(visit) ? () => _handleArriveAction(visit) : null,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: _canArrive(visit) ? const Color(0xFF21C15A) : const Color(0xFF21C15A),
-                    borderRadius: const BorderRadius.only(
-                      bottomRight: Radius.circular(11),
+                    color: const Color(0xFFFFC107), // Ensure yellow color is applied
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: locale.languageCode == 'ar' || locale.languageCode == 'ur' 
+                          ? Radius.zero 
+                          : const Radius.circular(11),
+                      bottomRight: locale.languageCode == 'ar' || locale.languageCode == 'ur' 
+                          ? const Radius.circular(11) 
+                          : Radius.zero,
                     ),
                   ),
                   child: Center(
                     child: Text(
-                      _canArrive(visit) ? 'Arrive' : 'Arrived',
+                      loc.address,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -956,8 +975,63 @@ Container(
                 ),
               ),
             ),
-            ],
-          ),
+            // Call button
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  _showPhoneDialog(context, visit['PHONE_NUMBER'] ?? '0000000000');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFA200), // Ensure orange color is applied
+                    // No border radius for middle button
+                  ),
+                  child: Center(
+                    child: Text(
+                      loc.call,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Arrive button
+            Expanded(
+              child: GestureDetector(
+                onTap: _canArrive(visit) ? () => _handleArriveAction(visit) : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF21C15A), // Ensure green color is applied
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: locale.languageCode == 'ar' || locale.languageCode == 'ur' 
+                          ? const Radius.circular(11) 
+                          : Radius.zero,
+                      bottomRight: locale.languageCode == 'ar' || locale.languageCode == 'ur' 
+                          ? Radius.zero 
+                          : const Radius.circular(11),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _canArrive(visit) ? loc.arrive : loc.arrived,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
         ],
       ),
     ),
@@ -965,6 +1039,7 @@ Container(
 }
 
   void _showPhoneDialog(BuildContext context, String phoneNumber) {
+    final loc = AppLocalizations.of(context)!;
   showDialog(
     context: context,
     barrierDismissible: true,
@@ -986,14 +1061,14 @@ Container(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Phone Number',
-                        style: TextStyle(
-                          color: Color(0xFF05ABD7),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Text(
+                      loc.phoneNumber,
+                      style: const TextStyle(
+                        color: Color(0xFF05ABD7),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
                       const SizedBox(height: 24),
                       // Phone number button
                       SizedBox(
@@ -1038,13 +1113,13 @@ Container(
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            'Back',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Text(
+                          loc.back,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
                         ),
                       ),
                     ],
@@ -1121,48 +1196,58 @@ void _resetVisitsDisplay() {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(languageProvider); // Add this line
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           // Header
           Container(
-            height: 120,
-            decoration: const BoxDecoration(
-              color: Color(0xFF05ABD7),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
+          height: 120,
+          decoration: const BoxDecoration(
+            color: Color(0xFF05ABD7),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
             ),
-            padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-            child: Stack(
-              children: [
-                // Arrow icon
-                const Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+          child: Stack(
+            children: [
+              // Arrow icon - positioned based on language
+              Positioned(
+                left: locale.languageCode == 'ar' || locale.languageCode == 'ur' ? null : 0,
+                right: locale.languageCode == 'ar' || locale.languageCode == 'ur' ? 0 : null,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
                   child: Icon(
-                    Icons.arrow_back_ios,
+                    locale.languageCode == 'ar' || locale.languageCode == 'ur' 
+                        ? Icons.arrow_back_ios 
+                        : Icons.arrow_back_ios,
                     color: Colors.white,
                     size: 20,
                   ),
                 ),
-                // Title
-                const Center(
-                  child: Text(
-                    'Visits',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 24,
-                    ),
+              ),
+              // Title
+              Center(
+                child: Text(
+                  loc.visits,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
 
           // Content
           Expanded(
@@ -1189,15 +1274,18 @@ void _resetVisitsDisplay() {
                     children: [
                       Expanded(
                         child: Text(
-                          _selectedOrderType ?? 'Order Type',
-                          style: TextStyle(
-                            color: _selectedOrderType != null 
-                                ? const Color(0xFF05ABD7) 
-                                : const Color(0xFF091735),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        _selectedOrderType ?? loc.orderType,
+                        textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                            ? TextAlign.right
+                            : TextAlign.left,
+                        style: TextStyle(
+                          color: _selectedOrderType != null 
+                              ? const Color(0xFF05ABD7) 
+                              : const Color(0xFF091735),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
                       ),
                       Icon(
                         Icons.keyboard_arrow_down, 
@@ -1230,7 +1318,10 @@ void _resetVisitsDisplay() {
                     children: [
                       Expanded(
                         child: Text(
-                          _selectedShiftType ?? 'Shift Type',
+                          _selectedShiftType ?? loc.shiftType,
+                          textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                              ? TextAlign.right
+                              : TextAlign.left,
                           style: TextStyle(
                             color: _selectedShiftType != null 
                                 ? const Color(0xFF05ABD7) 
@@ -1271,7 +1362,10 @@ void _resetVisitsDisplay() {
                     children: [
                       Expanded(
                         child: Text(
-                          _selectedVisitStatus ?? 'Choose visit status',
+                          _selectedVisitStatus ?? loc.chooseVisitStatus,
+                          textAlign: locale.languageCode == 'ar' || locale.languageCode == 'ur'
+                              ? TextAlign.right
+                              : TextAlign.left,
                           style: TextStyle(
                             color: _selectedVisitStatus != null 
                                 ? const Color(0xFF05ABD7) 
@@ -1318,13 +1412,13 @@ void _resetVisitsDisplay() {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text(
-                        'Show Visits',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    :  Text(
+                      loc.showVisits,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
                 ),
               ),
 
@@ -1345,14 +1439,14 @@ void _resetVisitsDisplay() {
                         color: Color(0xFF05ABD7),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'fetching visits...',
-                        style: TextStyle(
-                          color: Color(0xFF666666),
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
+                       Text(
+                      loc.fetchingVisits ?? 'fetching visits...',
+                      style: const TextStyle(
+                        color: Color(0xFF666666),
+                        fontSize: 16,
                       ),
+                      textAlign: TextAlign.center,
+                    ),
                     ],
                   ),
                 )
@@ -1388,14 +1482,15 @@ void _resetVisitsDisplay() {
                           children: [
                             // Centered title
                             Center(
-                              child: const Text(
-                                'Number of employees by nationality',
-                                style: TextStyle(
-                                  color: Color(0xFF00BCD4),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              child:  Text(
+                              loc.numberOfEmployeesByNationality ?? 'Number of employees by nationality',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF00BCD4),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
                               ),
+                            ),
                             ),
                             const SizedBox(height: 12),
                             
@@ -1440,12 +1535,12 @@ void _resetVisitsDisplay() {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'No data available',
-                                    style: TextStyle(
-                                      color: Color(0xFF90A3B2),
-                                      fontSize: 14,
-                                    ),
+                                  loc.noDataAvailable ?? 'No data available',
+                                  style: const TextStyle(
+                                    color: Color(0xFF90A3B2),
+                                    fontSize: 14,
                                   ),
+                                ),
                                   Text(
                                     '0',
                                     style: TextStyle(
@@ -1478,14 +1573,14 @@ void _resetVisitsDisplay() {
                           ),
                         ),
                         child: Text(
-                          'Total number of visits: $_totalVisits',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFF00BCD4),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        '${loc.totalNumberOfVisits ?? 'Total number of visits'}: $_totalVisits',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF00BCD4),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
+                      ),
                       ),
                     ],
                   ),
@@ -1506,14 +1601,14 @@ void _resetVisitsDisplay() {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFE0E0E0)),
                     ),
-                    child: const Center(
+                    child:  Center(
                       child: Text(
-                        'No visits found for the selected criteria',
-                        style: TextStyle(
-                          color: Color(0xFF666666),
-                          fontSize: 16,
-                        ),
+                      loc.noVisitsFound ?? 'No visits found for the selected criteria',
+                      style: const TextStyle(
+                        color: Color(0xFF666666),
+                        fontSize: 16,
                       ),
+                    ),
                     ),
                   ),
               ],
