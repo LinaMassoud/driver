@@ -578,7 +578,6 @@ class HomePage extends ConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade300,
                                       shape: BoxShape.circle,
-                                      
                                     ),
                                   ),
                           ),
