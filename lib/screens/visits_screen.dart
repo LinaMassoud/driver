@@ -13,7 +13,6 @@ import 'package:driver/providers/language_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:driver/providers/selected_date_provider.dart';
 
-
 class DriverVisitsScreen extends ConsumerStatefulWidget {
   final String? selectedDate;
   const DriverVisitsScreen({
@@ -688,16 +687,21 @@ Container(
         children: [
           // Main card content - wrapped in GestureDetector for navigation
           GestureDetector(
-            onTap: () {
-          // Create Visit object and navigate to visit details screen
-          final visitObj = Visit.fromJson(visit, shiftDescription: _selectedShiftDescription);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VisitDetailsScreen(visit: visitObj),
-            ),
-          );
-        },
+            onTap: () async {
+                // Create Visit object and navigate to visit details screen
+                final visitObj = Visit.fromJson(visit, shiftDescription: _selectedShiftDescription);
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VisitDetailsScreen(visit: visitObj),
+                  ),
+                );
+                
+                // If result is true, it means the visit was updated, so refresh the visits
+                if (result == true) {
+                  await _fetchVisits();
+                }
+              },
             child: Column(
               children: [
                 // Header section

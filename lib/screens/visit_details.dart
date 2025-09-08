@@ -272,6 +272,10 @@ Future<void> _handleUpdate() async {
           backgroundColor: Colors.green,
         ),
       );
+      
+      // Navigate back and trigger refresh
+      Navigator.of(context).pop(true); // Return true to indicate successful update
+      
     } else {
       // Use the error message from API response
       ScaffoldMessenger.of(context).showSnackBar(
