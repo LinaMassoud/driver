@@ -1,4 +1,20 @@
 {
   "@@locale": "en",
-  "home": "Home"
+  "home": "Home",
+  "chooseDay": "Choose Day",
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "customDate": "Custom Date",
+  "languageTitle": "Language",
+  "save": "Save",
+  "languageSaved": "Language saved",
+  "appPermission": "App Permission",
+  "language": "Language",
+  "logout": "Logout",
+  "deleteAccount": "Delete Account",
+
+  "chooseShiftType": "Choose Shift Type",
+  "go": "Go",
+  "back": "Back",
+  "failedToFetchShifts": "Failed to fetch shifts"
 }

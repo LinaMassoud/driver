@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://fawran.ddns.net:8080/ords/emdad/driver';
+  static const String _baseUrl =
+      'http://fawran.ddns.net:8080/ords/emdad/driver';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   static Future<bool>? _refreshTokenFuture;
@@ -34,10 +35,7 @@ class ApiService {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'driver_username': username,
-          'password': password,
-        }),
+        body: json.encode({'driver_username': username, 'password': password}),
       );
 
       print('[DRIVER_LOGIN] Response status: ${response.statusCode}');
@@ -45,7 +43,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final responseData = safeJsonDecode(response.body);
-        
+
         if (responseData != null) {
           // Save all relevant fields to secure storage
           final fieldsToStore = {
@@ -103,11 +101,13 @@ class ApiService {
     }
 
     final token = await _secureStorage.read(key: 'token');
+    final lang = await _secureStorage.read(key: 'lang') ?? '';
     print('[AUTH_REQUEST] Using token: ${token}');
 
     final requestHeaders = {
       'Content-Type': 'application/json',
       if (token != null) 'token': token,
+      'language': lang,
       ...?headers,
     };
 
@@ -119,10 +119,18 @@ class ApiService {
           response = await http.get(Uri.parse(url), headers: requestHeaders);
           break;
         case 'POST':
-          response = await http.post(Uri.parse(url), headers: requestHeaders, body: body);
+          response = await http.post(
+            Uri.parse(url),
+            headers: requestHeaders,
+            body: body,
+          );
           break;
         case 'PUT':
-          response = await http.put(Uri.parse(url), headers: requestHeaders, body: body);
+          response = await http.put(
+            Uri.parse(url),
+            headers: requestHeaders,
+            body: body,
+          );
           break;
         case 'DELETE':
           response = await http.delete(Uri.parse(url), headers: requestHeaders);
@@ -135,7 +143,9 @@ class ApiService {
       throw Exception('Network error: $e');
     }
 
-    print('[AUTH_REQUEST] Response status: ${response.statusCode} for $method $url');
+    print(
+      '[AUTH_REQUEST] Response status: ${response.statusCode} for $method $url',
+    );
 
     // If we get a 401 (unauthorized) and haven't already retried
     if (response.statusCode == 401 && retryCount == 0) {
@@ -143,10 +153,12 @@ class ApiService {
 
       final refreshSuccess = await refreshToken();
       if (refreshSuccess) {
-        print('[AUTH_REQUEST] Token refreshed successfully, retrying original request...');
+        print(
+          '[AUTH_REQUEST] Token refreshed successfully, retrying original request...',
+        );
         // Add a small delay to ensure token is properly saved
         await Future.delayed(Duration(milliseconds: 100));
-        
+
         // Retry the original request with the new token
         return makeAuthenticatedRequest(
           method: method,
@@ -174,10 +186,10 @@ class ApiService {
 
     // Set the flag to indicate refresh is in progress
     _isRefreshing = true;
-    
+
     // Start the refresh process and store the future
     _refreshTokenFuture = _performTokenRefresh();
-    
+
     try {
       final result = await _refreshTokenFuture!;
       return result;
@@ -200,15 +212,15 @@ class ApiService {
       }
 
       print('[REFRESH_TOKEN] Attempting to refresh driver token...');
-      print('[REFRESH_TOKEN] Using refresh token: ${refreshToken.substring(0, 10)}...');
+      print(
+        '[REFRESH_TOKEN] Using refresh token: ${refreshToken.substring(0, 10)}...',
+      );
 
       final url = Uri.parse('$_baseUrl/refresh-token');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'refresh_token': refreshToken,
-        }),
+        body: json.encode({'refresh_token': refreshToken}),
       );
 
       print('[REFRESH_TOKEN] Response status: ${response.statusCode}');
@@ -218,24 +230,34 @@ class ApiService {
         final responseData = json.decode(response.body);
 
         // Validate that we received both tokens
-        if (responseData['token'] != null && responseData['refresh_token'] != null) {
+        if (responseData['token'] != null &&
+            responseData['refresh_token'] != null) {
           final newToken = responseData['token'].toString();
-          
+
           // CHECK: If server returned the same token, it's a server bug
           if (newToken == oldToken) {
-            print('[REFRESH_TOKEN] WARNING: Server returned the same token! This is a server-side bug.');
-            print('[REFRESH_TOKEN] Old token: ${oldToken?.substring(0, 30)}...');
+            print(
+              '[REFRESH_TOKEN] WARNING: Server returned the same token! This is a server-side bug.',
+            );
+            print(
+              '[REFRESH_TOKEN] Old token: ${oldToken?.substring(0, 30)}...',
+            );
             print('[REFRESH_TOKEN] New token: ${newToken.substring(0, 30)}...');
-            
+
             // Return false to indicate refresh failed due to server issue
             return false;
           }
-          
+
           // Save new tokens
           await _secureStorage.write(key: 'token', value: newToken);
-          await _secureStorage.write(key: 'refresh_token', value: responseData['refresh_token']);
+          await _secureStorage.write(
+            key: 'refresh_token',
+            value: responseData['refresh_token'],
+          );
 
-          print('[REFRESH_TOKEN] New token saved: ${newToken.substring(0, 20)}...');
+          print(
+            '[REFRESH_TOKEN] New token saved: ${newToken.substring(0, 20)}...',
+          );
           print('[REFRESH_TOKEN] Driver token refreshed successfully');
           return true;
         } else {
@@ -243,7 +265,9 @@ class ApiService {
           return false;
         }
       } else {
-        print('[REFRESH_TOKEN] Failed to refresh token: ${response.statusCode}');
+        print(
+          '[REFRESH_TOKEN] Failed to refresh token: ${response.statusCode}',
+        );
         return false;
       }
     } catch (e) {
@@ -255,10 +279,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>?> getOrderTypes() async {
     try {
       final url = '$_baseUrl/order-types';
-      final response = await makeAuthenticatedRequest(
-        method: 'GET',
-        url: url,
-      );
+      final response = await makeAuthenticatedRequest(method: 'GET', url: url);
 
       print('[ORDER_TYPES] Response status: ${response.statusCode}');
       print('[ORDER_TYPES] Response body: ${response.body}');
@@ -267,7 +288,32 @@ class ApiService {
         final List<dynamic> data = json.decode(response.body);
         return data.cast<Map<String, dynamic>>();
       } else {
-        print('[ORDER_TYPES] Failed to fetch order types: ${response.statusCode}');
+        print(
+          '[ORDER_TYPES] Failed to fetch order types: ${response.statusCode}',
+        );
+        return null;
+      }
+    } catch (e) {
+      print('[ORDER_TYPES] Error fetching order types: $e');
+      return null;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>?> getDriverShifts() async {
+    try {
+      final url = '$_baseUrl/shifts';
+      final response = await makeAuthenticatedRequest(method: 'GET', url: url);
+
+      print('[ORDER_TYPES] Response status: ${response.statusCode}');
+      print('[ORDER_TYPES] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      } else {
+        print(
+          '[ORDER_TYPES] Failed to fetch order types: ${response.statusCode}',
+        );
         return null;
       }
     } catch (e) {
@@ -317,7 +363,9 @@ class ApiService {
         final List<dynamic> data = json.decode(response.body);
         return data.cast<Map<String, dynamic>>();
       } else {
-        print('[VISIT_STATUSES] Failed to fetch visit statuses: ${response.statusCode}');
+        print(
+          '[VISIT_STATUSES] Failed to fetch visit statuses: ${response.statusCode}',
+        );
         return null;
       }
     } catch (e) {
@@ -327,132 +375,128 @@ class ApiService {
   }
 
   static Future<dynamic> getVisits({
-  required int carId,
-  required int shiftId,
-  required String date,
-}) async {
-  try {
-    final url = Uri.parse('$_baseUrl/get-visits');
-    final requestBody = {
-      'car_id': carId,
-      'shift_id': shiftId,
-      'date': date,
-    };
+    required int carId,
+    required int shiftId,
+    required String date,
+  }) async {
+    try {
+      final url = Uri.parse('$_baseUrl/get-visits');
+      final requestBody = {'car_id': carId, 'shift_id': shiftId, 'date': date};
 
-    print('[GET_VISITS] Request body: ${json.encode(requestBody)}');
-    final response = await makeAuthenticatedRequest(
-      method: 'POST',
-      url: url.toString(),
-      body: json.encode({
-        'car_id': carId,
-        'shift_id': shiftId,
-        'date': date,
-      }),
-    );
+      print('[GET_VISITS] Request body: ${json.encode(requestBody)}');
+      final response = await makeAuthenticatedRequest(
+        method: 'POST',
+        url: url.toString(),
+        body: json.encode({'car_id': carId, 'shift_id': shiftId, 'date': date}),
+      );
 
-    print('[GET_VISITS] Response status: ${response.statusCode}');
-    print('[GET_VISITS] Response body: ${response.body}');
+      print('[GET_VISITS] Response status: ${response.statusCode}');
+      print('[GET_VISITS] Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      // Handle both array and object responses
-      final responseData = json.decode(response.body);
-      return responseData; // Return the decoded data directly
-    } else {
-      print('[GET_VISITS] Failed to fetch visits: ${response.statusCode}');
-      final responseData = json.decode(response.body);
-      return {'error': responseData['message'] ?? 'Failed to fetch visits'};
+      if (response.statusCode == 200) {
+        // Handle both array and object responses
+        final responseData = json.decode(response.body);
+        return responseData; // Return the decoded data directly
+      } else {
+        print('[GET_VISITS] Failed to fetch visits: ${response.statusCode}');
+        final responseData = json.decode(response.body);
+        return {'error': responseData['message'] ?? 'Failed to fetch visits'};
+      }
+    } catch (e) {
+      print('[GET_VISITS] Error fetching visits: $e');
+      return {'error': 'Network error. Please check your connection.'};
     }
-  } catch (e) {
-    print('[GET_VISITS] Error fetching visits: $e');
-    return {'error': 'Network error. Please check your connection.'};
   }
-}
 
-static Future<Map<String, dynamic>?> getCustomerAddressDetails(int addressId) async {
-  try {
-    final url = Uri.parse('$_baseUrl/get-customer-address-details/$addressId');
-    final response = await makeAuthenticatedRequest(
-      method: 'GET',
-      url: url.toString(),
-    );
+  static Future<Map<String, dynamic>?> getCustomerAddressDetails(
+    int addressId,
+  ) async {
+    try {
+      final url = Uri.parse(
+        '$_baseUrl/get-customer-address-details/$addressId',
+      );
+      final response = await makeAuthenticatedRequest(
+        method: 'GET',
+        url: url.toString(),
+      );
 
-    print('[ADDRESS_DETAILS] Response status: ${response.statusCode}');
-    print('[ADDRESS_DETAILS] Response body: ${response.body}');
+      print('[ADDRESS_DETAILS] Response status: ${response.statusCode}');
+      print('[ADDRESS_DETAILS] Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      return data;
-    } else {
-      print('[ADDRESS_DETAILS] Failed to fetch address details: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        print(
+          '[ADDRESS_DETAILS] Failed to fetch address details: ${response.statusCode}',
+        );
+        return null;
+      }
+    } catch (e) {
+      print('[ADDRESS_DETAILS] Error fetching address details: $e');
       return null;
     }
-  } catch (e) {
-    print('[ADDRESS_DETAILS] Error fetching address details: $e');
-    return null;
   }
-}
-static Future<Map<String, dynamic>> updateAppointment({
-  required int appointmentId,
-  int? visitStatusId,
-  String? actualStartDatetime,
-  String? actualEndDatetime,
-  String? location,
-  String? notes,
-}) async {
-  try {
-    final url = Uri.parse('$_baseUrl/update-appointment');
-    
-    // Build request body - only include non-null values
-    final Map<String, dynamic> requestBody = {
-      'appointment_id': appointmentId,
-    };
-    
-    if (visitStatusId != null) {
-      requestBody['visit_status_id'] = visitStatusId;
-    }
-    if (actualStartDatetime != null) {
-      requestBody['actual_start_datetime'] = actualStartDatetime;
-    }
-    if (actualEndDatetime != null) {
-      requestBody['actual_end_datetime'] = actualEndDatetime;
-    }
-    if (location != null) {
-      requestBody['location'] = location;
-    }
-    if (notes != null) {
-      requestBody['notes'] = notes;
-    }
 
-    print('[UPDATE_APPOINTMENT] Request body: ${json.encode(requestBody)}');
-    
-    final response = await makeAuthenticatedRequest(
-      method: 'PUT',
-      url: url.toString(),
-      body: json.encode(requestBody),
-    );
+  static Future<Map<String, dynamic>> updateAppointment({
+    required int appointmentId,
+    int? visitStatusId,
+    String? actualStartDatetime,
+    String? actualEndDatetime,
+    String? location,
+    String? notes,
+  }) async {
+    try {
+      final url = Uri.parse('$_baseUrl/update-appointment');
 
-    print('[UPDATE_APPOINTMENT] Response status: ${response.statusCode}');
-    print('[UPDATE_APPOINTMENT] Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      return {
-        'success': true,
-        'data': responseData,
+      // Build request body - only include non-null values
+      final Map<String, dynamic> requestBody = {
+        'appointment_id': appointmentId,
       };
-    } else {
-      final responseData = json.decode(response.body);
+
+      if (visitStatusId != null) {
+        requestBody['visit_status_id'] = visitStatusId;
+      }
+      if (actualStartDatetime != null) {
+        requestBody['actual_start_datetime'] = actualStartDatetime;
+      }
+      if (actualEndDatetime != null) {
+        requestBody['actual_end_datetime'] = actualEndDatetime;
+      }
+      if (location != null) {
+        requestBody['location'] = location;
+      }
+      if (notes != null) {
+        requestBody['notes'] = notes;
+      }
+
+      print('[UPDATE_APPOINTMENT] Request body: ${json.encode(requestBody)}');
+
+      final response = await makeAuthenticatedRequest(
+        method: 'PUT',
+        url: url.toString(),
+        body: json.encode(requestBody),
+      );
+
+      print('[UPDATE_APPOINTMENT] Response status: ${response.statusCode}');
+      print('[UPDATE_APPOINTMENT] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        return {'success': true, 'data': responseData};
+      } else {
+        final responseData = json.decode(response.body);
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Failed to update appointment',
+        };
+      }
+    } catch (e) {
+      print('[UPDATE_APPOINTMENT] Error updating appointment: $e');
       return {
         'success': false,
-        'error': responseData['message'] ?? 'Failed to update appointment',
+        'error': 'Network error. Please check your connection.',
       };
     }
-  } catch (e) {
-    print('[UPDATE_APPOINTMENT] Error updating appointment: $e');
-    return {
-      'success': false,
-      'error': 'Network error. Please check your connection.',
-    };
   }
-}
 }

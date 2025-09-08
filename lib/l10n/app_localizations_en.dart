@@ -10,4 +10,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get home => 'Home';
+
+  @override
+  String get chooseDay => 'Choose Day';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get tomorrow => 'Tomorrow';
+
+  @override
+  String get customDate => 'Custom Date';
+
+  @override
+  String get languageTitle => 'Language';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get languageSaved => 'Language saved';
+
+  @override
+  String get appPermission => 'App Permission';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get chooseShiftType => 'Choose Shift Type';
+
+  @override
+  String get go => 'Go';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get failedToFetchShifts => 'Failed to fetch shifts';
 }

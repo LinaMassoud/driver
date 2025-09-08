@@ -1,24 +1,37 @@
+import 'package:driver/l10n/app_localizations.dart';
+import 'package:driver/providers/language_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LanguagePage extends StatefulWidget {
+class LanguagePage extends ConsumerStatefulWidget {
   const LanguagePage({Key? key}) : super(key: key);
 
   @override
-  State<LanguagePage> createState() => _LanguagePageState();
+  ConsumerState<LanguagePage> createState() => _LanguagePageState();
 }
 
-class _LanguagePageState extends State<LanguagePage> {
-  String selectedLanguage = 'English';
+class _LanguagePageState extends ConsumerState<LanguagePage> {
+  String? tempSelectedLanguage; // 🔹 temporary selection
 
-  final List<Map<String, String>> languages = [
-    {'name': 'English', 'icon': 'assets/icons/english.png'},
-    {'name': 'العربية', 'icon': 'assets/icons/arabic.png'},
-    {'name': 'اردو', 'icon': 'assets/icons/ardo.png'},
+  final List<Map<String, String>> languages = const [
+    {'name': 'English', 'icon': 'assets/icons/english.png', 'local': 'en'},
+    {'name': 'العربية', 'icon': 'assets/icons/arabic.png', 'local': 'ar'},
+    {'name': 'اردو', 'icon': 'assets/icons/ardo.png', 'local': 'ur'},
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize with currently saved language
+    tempSelectedLanguage = ref.read(languageProvider).languageCode;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final selectedLanguage = ref.watch(languageProvider);
+    final languageNotifier = ref.read(languageProvider.notifier);
+    final loc = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: const Color(0xFFEFF6FF),
       body: SafeArea(
@@ -34,27 +47,21 @@ class _LanguagePageState extends State<LanguagePage> {
                   bottomRight: Radius.circular(20),
                 ),
               ),
-              child: Stack(
-                alignment: Alignment.center,
+              child: Row(
                 children: [
-                  const Center(
-                    child: Text(
-                      'Language',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  const Spacer(),
+                  Text(
+                    loc.languageTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Positioned(
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
@@ -62,14 +69,15 @@ class _LanguagePageState extends State<LanguagePage> {
 
             const SizedBox(height: 20),
 
-            // Language options
+            // Language list
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 0),
                 itemCount: languages.length,
                 itemBuilder: (context, index) {
                   final lang = languages[index];
-                  final isSelected = selectedLanguage == lang['name'];
+                  final isSelected = tempSelectedLanguage == lang['local'];
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -78,7 +86,7 @@ class _LanguagePageState extends State<LanguagePage> {
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
-                          selectedLanguage = lang['name']!;
+                          tempSelectedLanguage = lang['local'];
                         });
                       },
                       child: Container(
@@ -87,7 +95,9 @@ class _LanguagePageState extends State<LanguagePage> {
                           vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.white : Colors.white70,
+                          color: isSelected
+                              ? const Color(0xFF80D9F2)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: isSelected
@@ -148,15 +158,17 @@ class _LanguagePageState extends State<LanguagePage> {
                     ),
                   ),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Language saved: $selectedLanguage'),
-                      ),
-                    );
+                    if (tempSelectedLanguage != null) {
+                      languageNotifier.selectLanguage(tempSelectedLanguage!);
+                      languageNotifier.saveLanguage();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(loc.languageSaved)),
+                      );
+                    }
                   },
-                  child: const Text(
-                    'Save',
-                    style: TextStyle(
+                  child: Text(
+                    loc.save,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
