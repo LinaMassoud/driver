@@ -1,6 +1,7 @@
 import 'package:driver/l10n/app_localizations.dart';
 import 'package:driver/providers/driver_info_provider.dart';
 import 'package:driver/providers/language_provider.dart';
+import 'package:driver/providers/selected_date_provider.dart';
 import 'package:driver/screens/visits_screen.dart';
 import 'package:driver/services/api_service.dart';
 import 'package:driver/widgets/date_card.dart';
@@ -229,7 +230,7 @@ class HomePage extends ConsumerWidget {
               label: loc.today, // 🔹 localized "Today"
               day: DateFormat("dd", locale.languageCode).format(today),
               date: dateFormatter.format(today),
-              onTap: () => showShiftPopup(context, today),
+              onTap: () => showShiftPopup(context, today, ref),
             ),
 
             // Tomorrow Card
@@ -237,7 +238,7 @@ class HomePage extends ConsumerWidget {
               label: loc.tomorrow, // 🔹 localized "Tomorrow"
               day: DateFormat("dd", locale.languageCode).format(tomorrow),
               date: dateFormatter.format(tomorrow),
-              onTap: () => showShiftPopup(context, today),
+              onTap: () => showShiftPopup(context, today, ref),
             ),
             const SizedBox(height: 20),
 
@@ -438,7 +439,7 @@ class HomePage extends ConsumerWidget {
 
                           // Use parentContext after the pop, safely
                           Future.microtask(() {
-                            showShiftPopup(parentContext, selectedDate!);
+                            showShiftPopup(parentContext, selectedDate!, ref);
                           });
                         },
                         child: Container(
@@ -485,7 +486,11 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Future<void> showShiftPopup(BuildContext context, DateTime date) async {
+  Future<void> showShiftPopup(
+    BuildContext context,
+    DateTime date,
+    WidgetRef ref,
+  ) async {
     String selectedShift = "";
 
     // Map each shift ID to its corresponding SVG
@@ -501,7 +506,10 @@ class HomePage extends ConsumerWidget {
       shifts =
           await ApiService.getDriverShifts(); // Make sure this returns List<Map<String, dynamic>>
       if (shifts!.isNotEmpty) {
-        selectedShift = shifts[0]['service_shifts']; // default selection
+        selectedShift = shifts[0]['service_shifts'];
+        ref
+            .read(selectedDateShiftProvider.notifier)
+            .setShift(selectedShift); // default selection
       }
     } catch (e) {
       print("Failed to fetch shifts: $e");
@@ -533,6 +541,9 @@ class HomePage extends ConsumerWidget {
                     return GestureDetector(
                       onTap: () => setState(() {
                         selectedShift = shift['service_shifts'];
+                        ref
+                            .read(selectedDateShiftProvider.notifier)
+                            .setShift(selectedShift); // default selection
                       }),
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 4),
