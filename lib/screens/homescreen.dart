@@ -479,6 +479,13 @@ class HomePage extends ConsumerWidget {
   Future<void> showShiftPopup(BuildContext context, DateTime date) async {
     String selectedShift = "Morning";
 
+    // Map each shift to its corresponding SVG
+    final shiftIcons = {
+      "Morning": "assets/icons/1.svg",
+      "Evening": "assets/icons/2.svg",
+      "Full Day": "assets/icons/3.svg",
+    };
+
     await showDialog(
       context: context,
       builder: (context) {
@@ -490,12 +497,9 @@ class HomePage extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              const Text(
                 "Choose Shift Type",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 16),
               ...["Morning", "Evening", "Full Day"].map((shift) {
@@ -520,17 +524,44 @@ class HomePage extends ConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          shift,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            SvgPicture.asset(
+                              shiftIcons[shift]!,
+                              width: 24,
+                              height: 24,
+                              color: isSelected
+                                  ? const Color(0xFF05ABD7)
+                                  : Colors.grey,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              shift,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        if (isSelected)
-                          const Icon(
-                            Icons.check_circle,
-                            color: Color(0xFF05ABD7),
-                          )
-                        else
-                          const Icon(Icons.circle_outlined, color: Colors.grey),
+                        // Custom radio button
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected
+                                ? const Color(0xFF05ABD7)
+                                : Colors.grey.shade300,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 14,
+                                )
+                              : null,
+                        ),
                       ],
                     ),
                   ),
@@ -575,7 +606,4 @@ class HomePage extends ConsumerWidget {
       },
     );
   }
-
-
-
 }
