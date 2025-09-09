@@ -101,6 +101,9 @@ void _setShiftFromProvider(String shiftName) {
       _visitStatuses = visitStatusesResult ?? [];
     });
 
+    // Set default values after loading data
+    await _setDefaultValues();
+
     // After loading shift types, check if there's a selected shift from provider
     final selectedDateShift = ref.read(selectedDateShiftProvider);
     if (selectedDateShift.shift != null && selectedDateShift.shift!.isNotEmpty) {
@@ -149,41 +152,47 @@ void _setShiftFromProvider(String shiftName) {
     );
 
     if (result != null) {
-      // Check if result is a Map with error key
-      if (result is Map && result.containsKey('error')) {
-        _showErrorSnackBar(result['error']);
-      } else {
-        List<Map<String, dynamic>> visits = [];
-        
-        // Handle both response formats:
-        // 1. Direct array response: []
-        // 2. Object with visits key: {"visits": [...]}
-        if (result is List) {
-          visits = result.cast<Map<String, dynamic>>();
-        } else if (result is Map && result.containsKey('visits')) {
-          visits = (result['visits'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-        }
-
-        // Calculate nationality statistics from the visits data
-        Map<String, int> nationalityCount = {};
-        
-        for (var visit in visits) {
-          final groupName = visit['GROUP_NAME']?.toString().trim();
-          if (groupName != null && groupName.isNotEmpty) {
-            nationalityCount[groupName] = (nationalityCount[groupName] ?? 0) + 1;
-          }
-        }
-
-        setState(() {
-          _visits = visits;
-          _nationalityStats = nationalityCount;
-          _totalVisits = visits.length;
-          _showVisits = true;
-        });
-      }
-    } else {
-      _showErrorSnackBar('Failed to fetch visits');
+  // Check if result is a Map with error key
+  if (result is Map && result.containsKey('error')) {
+    _showErrorSnackBar(result['error']);
+  } else {
+    List<Map<String, dynamic>> visits = [];
+    
+    // Handle both response formats:
+    // 1. Direct array response: []
+    // 2. Object with visits key: {"visits": [...]}
+    if (result is List) {
+      visits = result.cast<Map<String, dynamic>>();
+    } else if (result is Map && result.containsKey('visits')) {
+      visits = (result['visits'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     }
+
+    // Filter visits by status first (before sorting)
+    visits = _filterVisitsByStatus(visits);
+
+    // Sort visits based on selected order type
+    visits = await _sortVisits(visits);
+
+    // Calculate nationality statistics from the filtered and sorted visits data
+    Map<String, int> nationalityCount = {};
+    
+    for (var visit in visits) {
+      final groupName = visit['GROUP_NAME']?.toString().trim();
+      if (groupName != null && groupName.isNotEmpty) {
+        nationalityCount[groupName] = (nationalityCount[groupName] ?? 0) + 1;
+      }
+    }
+
+    setState(() {
+      _visits = visits;
+      _nationalityStats = nationalityCount;
+      _totalVisits = visits.length;
+      _showVisits = true;
+    });
+  }
+} else {
+  _showErrorSnackBar('Failed to fetch visits');
+}
   } catch (e) {
     print('Error fetching visits: $e');
     _showErrorSnackBar('Failed to fetch visits. Please try again.');
@@ -193,6 +202,159 @@ void _setShiftFromProvider(String shiftName) {
     });
   }
 }
+
+Future<void> _setDefaultValues() async {
+  final loc = AppLocalizations.of(context)!;
+  // Set default order type to "Order by Manual" (ID: 3)
+  final manualOrderType = _orderTypes.firstWhere(
+    (orderType) => orderType['id'] == 3,
+    orElse: () => {},
+  );
+  
+  if (manualOrderType.isNotEmpty) {
+    setState(() {
+      _selectedOrderTypeId = 3;
+      _selectedOrderType = manualOrderType['order_type'];
+    });
+  }
+
+  // Set default visit status to "All" (null values)
+  setState(() {
+    _selectedVisitStatusId = null;
+    _selectedVisitStatus = loc.all;
+  });
+}
+
+
+
+
+Future<List<Map<String, dynamic>>> _sortVisits(List<Map<String, dynamic>> visits) async {
+  if (_selectedOrderTypeId == null) return visits;
+
+  switch (_selectedOrderTypeId) {
+    case 1: // Order by Delivery No.
+      visits.sort((a, b) {
+        final contractA = a['CONTRACT_NUMBER']?.toString() ?? '';
+        final contractB = b['CONTRACT_NUMBER']?.toString() ?? '';
+        return contractB.compareTo(contractA); // Descending order
+      });
+      return visits;
+
+    case 2: // Order by Google (closest distance)
+      return await _sortByDistance(visits);
+
+    case 3: // Order by Manual
+    default:
+      return visits; // Return as-is from API
+  }
+}
+
+Future<List<Map<String, dynamic>>> _sortByDistance(List<Map<String, dynamic>> visits) async {
+  try {
+    // Get current location first
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print('Location permissions denied, returning unsorted visits');
+        return visits;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print('Location permissions permanently denied, returning unsorted visits');
+      return visits;
+    }
+
+    Position currentPosition = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Create a list to store visits with their distances
+    List<Map<String, dynamic>> visitsWithDistance = [];
+
+    for (var visit in visits) {
+      final addressId = visit['ADDRESS_ID'];
+      if (addressId != null) {
+        final addressDetails = await ApiService.getCustomerAddressDetails(addressId);
+        
+        if (addressDetails != null) {
+          final latitude = addressDetails['latitude']?.toDouble() ?? 24.7136;
+          final longitude = addressDetails['longitude']?.toDouble() ?? 46.6753;
+          
+          // Calculate distance using Geolocator
+          final distance = Geolocator.distanceBetween(
+            currentPosition.latitude,
+            currentPosition.longitude,
+            latitude,
+            longitude,
+          );
+          
+          // Add distance to visit data
+          Map<String, dynamic> visitWithDistance = Map.from(visit);
+          visitWithDistance['_distance'] = distance;
+          visitsWithDistance.add(visitWithDistance);
+        } else {
+          // If address details not found, assign a large distance
+          Map<String, dynamic> visitWithDistance = Map.from(visit);
+          visitWithDistance['_distance'] = double.maxFinite;
+          visitsWithDistance.add(visitWithDistance);
+        }
+      } else {
+        // If no address ID, assign a large distance
+        Map<String, dynamic> visitWithDistance = Map.from(visit);
+        visitWithDistance['_distance'] = double.maxFinite;
+        visitsWithDistance.add(visitWithDistance);
+      }
+    }
+
+    // Sort by distance (ascending - closest first)
+    visitsWithDistance.sort((a, b) {
+      final distanceA = a['_distance'] as double;
+      final distanceB = b['_distance'] as double;
+      return distanceA.compareTo(distanceB);
+    });
+
+    // Remove the temporary distance field before returning
+    for (var visit in visitsWithDistance) {
+      visit.remove('_distance');
+    }
+
+    return visitsWithDistance;
+  } catch (e) {
+    print('Error sorting visits by distance: $e');
+    return visits; // Return unsorted if error occurs
+  }
+  
+}
+
+
+List<Map<String, dynamic>> _filterVisitsByStatus(List<Map<String, dynamic>> visits) {
+  // If no visit status is selected (null), return all visits
+  if (_selectedVisitStatusId == null) {
+    return visits;
+  }
+
+  // Find the selected status name from the _visitStatuses list
+  String? selectedStatusName;
+  for (var status in _visitStatuses) {
+    if (status['id'] == _selectedVisitStatusId) {
+      selectedStatusName = status['status_name'];
+      break;
+    }
+  }
+
+  if (selectedStatusName == null) {
+    return visits; // If status not found, return all visits
+  }
+
+  // Filter visits based on STATUS_TYPE matching the selected status name
+  return visits.where((visit) {
+    final visitStatusType = visit['STATUS_TYPE']?.toString() ?? '';
+    return visitStatusType.toLowerCase() == selectedStatusName?.toLowerCase();
+  }).toList();
+}
+
 String _getTodayDateString() {
   final now = DateTime.now();
   return "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -409,13 +571,13 @@ void _showVisitStatusDialog(BuildContext context) {
                         child: SingleChildScrollView(
                           child: Column(
                             children: [
-                              // "All" option
+                              // "All" option - now selected by default
                               _buildDialogOption(
                                 loc.all,
                                 _selectedVisitStatus,
                                 (value) {
                                   setState(() {
-                                    _selectedVisitStatus = null;
+                                    _selectedVisitStatus = loc.all;
                                     _selectedVisitStatusId = null;
                                   });
                                   _resetVisitsDisplay();
