@@ -101,6 +101,9 @@ void _setShiftFromProvider(String shiftName) {
       _visitStatuses = visitStatusesResult ?? [];
     });
 
+    // Set default values after loading data
+    await _setDefaultValues();
+
     // After loading shift types, check if there's a selected shift from provider
     final selectedDateShift = ref.read(selectedDateShiftProvider);
     if (selectedDateShift.shift != null && selectedDateShift.shift!.isNotEmpty) {
@@ -198,6 +201,28 @@ void _setShiftFromProvider(String shiftName) {
       _isLoading = false;
     });
   }
+}
+
+Future<void> _setDefaultValues() async {
+  final loc = AppLocalizations.of(context)!;
+  // Set default order type to "Order by Manual" (ID: 3)
+  final manualOrderType = _orderTypes.firstWhere(
+    (orderType) => orderType['id'] == 3,
+    orElse: () => {},
+  );
+  
+  if (manualOrderType.isNotEmpty) {
+    setState(() {
+      _selectedOrderTypeId = 3;
+      _selectedOrderType = manualOrderType['order_type'];
+    });
+  }
+
+  // Set default visit status to "All" (null values)
+  setState(() {
+    _selectedVisitStatusId = null;
+    _selectedVisitStatus = loc.all;
+  });
 }
 
 
@@ -546,13 +571,13 @@ void _showVisitStatusDialog(BuildContext context) {
                         child: SingleChildScrollView(
                           child: Column(
                             children: [
-                              // "All" option
+                              // "All" option - now selected by default
                               _buildDialogOption(
                                 loc.all,
                                 _selectedVisitStatus,
                                 (value) {
                                   setState(() {
-                                    _selectedVisitStatus = null;
+                                    _selectedVisitStatus = loc.all;
                                     _selectedVisitStatusId = null;
                                   });
                                   _resetVisitsDisplay();
