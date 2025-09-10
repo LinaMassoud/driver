@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class LaunchScreen extends StatefulWidget {
   const LaunchScreen({super.key});
@@ -20,8 +21,13 @@ class _LaunchScreenState extends State<LaunchScreen> {
   Future<void> _checkLoginStatus() async {
     final token = await _secureStorage.read(key: 'token');
 
-    // Delay for splash screen effect (optional)
+    // Delay for splash effect
     await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    // 🔹 Request location permission before navigating
+    await _requestLocationPermission();
 
     if (!mounted) return;
 
@@ -29,6 +35,40 @@ class _LaunchScreenState extends State<LaunchScreen> {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  Future<void> _requestLocationPermission() async {
+    var status = await Permission.location.status;
+
+    if (!status.isGranted) {
+      status = await Permission.location.request();
+    }
+
+    if (status.isPermanentlyDenied) {
+      // User selected "Don't ask again"
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Location Permission Required"),
+          content: const Text(
+            "Please enable location permission from settings to use this app.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                openAppSettings();
+              },
+              child: const Text("Open Settings"),
+            ),
+          ],
+        ),
+      );
     }
   }
 

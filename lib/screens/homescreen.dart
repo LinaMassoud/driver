@@ -392,9 +392,11 @@ class HomePage extends ConsumerWidget {
   }
 
   Future<void> showCustomCalendarPopup(
-    BuildContext parentContext, // use parent context
+    BuildContext parentContext, 
+    // use parent context
     WidgetRef ref,
   ) async {
+     final loc = AppLocalizations.of(parentContext)!;
     final locale = ref.watch(languageProvider);
     DateTime? selectedDate;
 
@@ -429,7 +431,7 @@ class HomePage extends ConsumerWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    "Choose Date",
+                    loc.chooseDay,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
