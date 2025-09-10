@@ -12,6 +12,7 @@ import 'package:driver/l10n/app_localizations.dart';
 import 'package:driver/providers/language_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:driver/providers/selected_date_provider.dart';
+import 'package:map_launcher/map_launcher.dart';
 
 class DriverVisitsScreen extends ConsumerStatefulWidget {
   final String? selectedDate;
@@ -624,22 +625,22 @@ void _showVisitStatusDialog(BuildContext context) {
 }
 
 Future<void> _openDefaultMaps(double latitude, double longitude, String address) async {
-  // Try to open native map apps first
-  final Uri geoUri = Uri.parse('geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encodeComponent(address)})');
-  
-  if (await canLaunchUrl(geoUri)) {
-    await launchUrl(geoUri, mode: LaunchMode.externalApplication);
-  } else {
-    // Fallback to Google Maps web
-    final Uri googleMapsUri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&travelmode=driving'
-    );
+  try {
+    final availableMaps = await MapLauncher.installedMaps;
     
-    if (await canLaunchUrl(googleMapsUri)) {
-      await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
-    } else {
-      _showErrorSnackBar('Could not open maps');
+    if (availableMaps.isEmpty) {
+      _showErrorSnackBar('No map applications found');
+      return;
     }
+
+    // Use the first available map app
+    await availableMaps.first.showDirections(
+      destination: Coords(latitude, longitude),
+      destinationTitle: address,
+    );
+  } catch (e) {
+    print('Error opening maps: $e');
+    _showErrorSnackBar('Could not open maps');
   }
 }
 
