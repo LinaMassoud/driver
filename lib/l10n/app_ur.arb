@@ -1,0 +1,20 @@
+{
+  "@@locale": "ur",
+  "home": "ہوم",
+  "chooseDay": "دن منتخب کریں",
+  "today": "آج",
+  "tomorrow": "کل",
+  "customDate": "حسب ضرورت تاریخ",
+  "languageTitle": "زبان",
+  "save": "محفوظ کریں",
+  "languageSaved": "زبان محفوظ ہوگئی",
+  "appPermission": "ایپ کی اجازتیں",
+  "language": "زبان",
+  "logout": "لاگ آؤٹ",
+  "deleteAccount": "اکاؤنٹ حذف کریں",
+
+   "chooseShiftType": "شفٹ کی قسم منتخب کریں",
+  "go": "چلو",
+  "back": "پیچھے",
+  "failedToFetchShifts": "شفٹ حاصل کرنے میں ناکامی"
+}
