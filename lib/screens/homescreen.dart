@@ -72,8 +72,7 @@ class HomePage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xfff5f8fe),
       drawer: _buildDrawer(context, loc, ref),
-      body: SafeArea(
-        child: Column(
+      body: Column(
           children: [
             Stack(
               children: [
@@ -94,12 +93,12 @@ class HomePage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.only(
-                    top: 80,
-                    bottom: 16,
-                    left: 30,
-                    right: 30,
-                  ),
+                  padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 80,
+              bottom: 16,
+              left: 30,
+              right: 30,
+            ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -163,10 +162,12 @@ class HomePage extends ConsumerWidget {
                   right: 0,
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
+                    padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    bottom: 16,
+                    left: 20,
+                    right: 20,
+                  ),
                     decoration: const BoxDecoration(
                       color: Color(0xFF05ABD7),
                       borderRadius: BorderRadius.only(
@@ -275,7 +276,6 @@ class HomePage extends ConsumerWidget {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -292,6 +292,7 @@ class HomePage extends ConsumerWidget {
           bottomRight: Radius.circular(30),
         ),
       ),
+      child: SafeArea(
       child: Column(
         children: [
           const SizedBox(height: 40),
@@ -356,6 +357,7 @@ class HomePage extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
         ],
+      ),
       ),
     );
   }

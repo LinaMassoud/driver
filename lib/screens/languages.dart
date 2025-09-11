@@ -34,8 +34,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFEFF6FF),
-      body: SafeArea(
-        child: Column(
+      body: Column(
           children: [
             // Header
             Directionality(
@@ -43,10 +42,12 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                   ? TextDirection.rtl
                   : TextDirection.ltr,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 20,
-                ),
+                padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 20,
+            bottom: 20,
+            left: 16,
+            right: 16,
+          ),
                 decoration: const BoxDecoration(
                   color: Color(0xFF05ABD7),
                   borderRadius: BorderRadius.only(
@@ -217,7 +218,6 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
             ),
           ],
         ),
-      ),
     );
   }
 }

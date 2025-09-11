@@ -128,13 +128,17 @@ class _PermissionStepsScreenState extends State<PermissionStepsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
+      body:Column(
           children: [
             // Header
             Container(
               width: double.infinity, // full width
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
+              padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 36,
+          bottom: 36,
+          left: 16,
+          right: 16,
+        ),
               decoration: const BoxDecoration(
                 color: Color(0xFF00BCD4),
                 borderRadius: BorderRadius.only(
@@ -220,7 +224,6 @@ class _PermissionStepsScreenState extends State<PermissionStepsScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 }
