@@ -140,7 +140,7 @@ class _PermissionStepsScreenState extends State<PermissionStepsScreen> {
           right: 16,
         ),
               decoration: const BoxDecoration(
-                color: Color(0xFF00BCD4),
+                color: Color(0xFF05ABD7),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(25),
                   bottomRight: Radius.circular(25),
